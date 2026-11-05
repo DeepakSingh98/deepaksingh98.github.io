@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4-digit multiplication in 487 nonzero weights · Deepak Singh</title>
-<meta name="description" content="An LLM set every weight of a small transformer that multiplies 4-digit numbers, with no training: 487 nonzero weights in two layers.">
-<meta property="og:title" content="4-digit multiplication in 487 nonzero weights with 0 training">
+<title>4-digit multiplication in 364 nonzero weights · Deepak Singh</title>
+<meta name="description" content="An LLM set every weight of a small transformer that multiplies 4-digit numbers, with no training: 364 nonzero weights.">
+<meta property="og:title" content="4-digit multiplication in 364 nonzero weights with 0 training">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://deepaksingh98.github.io/projects/mult-min-net/">
 <meta name="theme-color" content="#151513">
@@ -22,7 +22,7 @@
     <article class="detail post">
       <svg class="icon" aria-hidden="true"><use href="../../assets/icons.svg#mult"/></svg>
       <p class="date">November 5, 2026</p>
-      <h1>4-digit multiplication in 487 nonzero weights with 0 training</h1>
+      <h1>4-digit multiplication in 364 nonzero weights with 0 training</h1>
 
       <p>A couple of days ago, Rikiya Takehi et al. published <a href="https://rikiyat.github.io/blog/weight-space-programming/">Sparks of Weight-Space Programming</a>, showing LLMs reading, editing and writing neural-network weights directly. I wanted to try it myself, on something small enough to inspect closely.</p>
 
@@ -48,9 +48,9 @@
       <p>That worked, which raised the obvious question: how small can it get?</p>
 
       <h2>Making it smaller</h2>
-      <p>I asked Astra to shrink it.</p>
+      <p>I asked Astra to shrink it, in three versions: two layers, one layer, and a single block run over and over with its weights counted once.</p>
       <ul>
-        <li><strong>Free to choose:</strong> the number of layers and heads, and every width.</li>
+        <li><strong>Free to choose:</strong> the number of heads, every width, and, for the reused block, how many times it runs.</li>
         <li><strong>Fixed:</strong> a GPT-2-style block, with causal attention, a GELU MLP, LayerNorm, and tied input and output embeddings.</li>
         <li><strong>Score:</strong> the number of nonzero weights.</li>
       </ul>
@@ -58,21 +58,22 @@
       <table>
         <thead><tr><th>Construction</th><th class="num">Nonzero weights</th></tr></thead>
         <tbody>
+          <tr><td>One block, run 42 times</td><td class="num"><strong>364</strong></td></tr>
           <tr><td>Two layers</td><td class="num"><strong>487</strong></td></tr>
           <tr><td>One layer</td><td class="num"><strong>927</strong></td></tr>
-          <tr><td>One block, looped 42 times</td><td class="num"><strong>364</strong></td></tr>
         </tbody>
       </table>
 
       <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties.</p>
+
+      <p>The smallest is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on: passes 1–4 build the digit products, 5 and 6 gather each column, 7–41 subtract 10 whenever a column’s value is above 9, and pass 42 writes out the digit. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
 
       <figure>
         <img src="interp_weights.png" width="2622" height="1199" alt="Every weight matrix of the 487-weight network" loading="lazy">
         <figcaption>Every weight matrix of the two-layer network, cropped to the 21 of 512 residual dimensions it actually uses. Grey is exactly zero.</figcaption>
       </figure>
 
-      <p>For scale, Astra’s original 14.2M-parameter build used 224,420 nonzero weights, so the two-layer version uses about 461× fewer. Each took about 30 Python runs.</p>
-      <p>I also tried a looped version: one block applied 42 times, with its weights counted once. It needs only 364 nonzero weights.</p>
+      <p>For scale, Astra’s original 14.2M-parameter build used 224,420 nonzero weights, so the reused block uses about 617× fewer and the two-layer version about 461× fewer. Each took about 30 Python runs.</p>
 
       <h2>Where the computation lives</h2>
       <p>The fun part is seeing where Astra put the arithmetic.</p>
@@ -101,7 +102,7 @@
             <li>A single GELU MLP turns each column sum into its last digit with a sawtooth.</li>
           </ul>
         </li>
-        <li><strong>Looped.</strong>
+        <li><strong>One block, 42 passes.</strong>
           <ul>
             <li>A counter in the residual stream sequences a little program: multiply, gather the column, then take it mod 10 by repeated subtraction, one pass at a time.</li>
           </ul>
