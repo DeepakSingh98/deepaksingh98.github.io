@@ -1,10 +1,78 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
-    <head>
-        <title>Deepak Singh</title>
-    </head>
-    <body>
-        hello, homepage
-    </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deepak Singh</title>
+<meta name="description" content="Deepak Singh's personal site and projects.">
+<meta property="og:title" content="Deepak Singh">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://deepaksingh98.github.io/">
+<meta name="theme-color" content="#151513">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/theme.js"></script>
+</head>
+<body>
+<button class="theme-toggle" type="button" aria-label="Toggle dark mode"><svg aria-hidden="true"><use href="assets/icons.svg#contrast"/></svg></button>
+
+<figure class="hero">
+  <img src="assets/salisbury.webp" width="1400" height="350" alt="Salisbury Cathedral’s spire on a clear winter morning, beside a bare tree.">
+  <figcaption>Salisbury, England</figcaption>
+</figure>
+
+<div class="page home">
+  <main>
+    <header>
+      <h1>Deepak Singh</h1>
+      <nav class="social" aria-label="Elsewhere">
+        <a href="https://x.com/deepaksinghml" aria-label="X" title="X"><svg aria-hidden="true"><use href="assets/icons.svg#x"/></svg></a>
+        <a href="https://www.linkedin.com/in/deepak-t-singh/" aria-label="LinkedIn" title="LinkedIn"><svg aria-hidden="true"><use href="assets/icons.svg#linkedin"/></svg></a>
+        <a href="https://github.com/DeepakSingh98" aria-label="GitHub" title="GitHub"><svg aria-hidden="true"><use href="assets/icons.svg#github"/></svg></a>
+      </nav>
+    </header>
+
+    <section class="about" aria-label="About">
+      <div>
+        <p class="lede">I’m currently an independent researcher and builder.</p>
+        <p>Previously, I’ve worked on:</p>
+        <ul class="bio">
+          <li>Scaling Mercor from $1M–100M as the third employee.</li>
+          <li>Simulation software for running backpropagation on photonic hardware.</li>
+          <li>Biophysics world models for drug discovery targeting optic nerve regeneration.</li>
+          <li>Brain-inspired adversarial robustness and continual learning through the Kreiman Lab.</li>
+        </ul>
+        <p>At Harvard, I double majored in Computer Science and Neuroscience with a minor in Philosophy.</p>
+        <p>I am a member of Prod’s Cohort 2.0.</p>
+      </div>
+    </section>
+
+    <section class="work" aria-labelledby="projects">
+      <h2 id="projects">Projects</h2>
+      <ul class="projects">
+        <li>
+          <a class="project" href="projects/latch/">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#latch"/></svg>
+            <span>
+              <span class="name">Latch</span>
+              <span class="desc">A compiler that turns a PyTorch training step into one GPU program.</span>
+            </span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a class="project" href="projects/qwenlab/">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#qwenlab"/></svg>
+            <span>
+              <span class="name">qwenLab</span>
+              <span class="desc">Qwen3.5-9B with a small ML research lab compiled into it.</span>
+            </span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+  </main>
+</div>
+</body>
 </html>
