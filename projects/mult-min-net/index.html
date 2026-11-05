@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4-digit multiplication in 364 nonzero weights · Deepak Singh</title>
-<meta name="description" content="An LLM set every weight of a small transformer that multiplies 4-digit numbers, with no training: 364 nonzero weights.">
-<meta property="og:title" content="4-digit multiplication in 364 nonzero weights with 0 training">
+<title>4-digit multiplication in 355 nonzero weights · Deepak Singh</title>
+<meta name="description" content="LLMs set every weight of small transformers that multiply 4-digit numbers, with no training: down to 355 nonzero weights.">
+<meta property="og:title" content="4-digit multiplication in 355 nonzero weights with 0 training">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://deepaksingh98.github.io/projects/mult-min-net/">
 <meta name="theme-color" content="#151513">
@@ -22,7 +22,9 @@
     <article class="detail post">
       <svg class="icon" aria-hidden="true"><use href="../../assets/icons.svg#mult"/></svg>
       <p class="date">November 5, 2026</p>
-      <h1>4-digit multiplication in 364 nonzero weights with 0 training</h1>
+      <h1>4-digit multiplication in 355 nonzero weights with 0 training</h1>
+
+      <p class="lede">I had LLMs write every weight of small transformers that multiply 4-digit numbers, with no training. A two-layer version uses 487 nonzero weights and gets all 81 million pairs of 4-digit numbers right. A single block run in a loop gets it down to 355, and signals when it’s done.</p>
 
       <p>A couple of days ago, Rikiya Takehi et al. published <a href="https://rikiyat.github.io/blog/weight-space-programming/">Sparks of Weight-Space Programming</a>, showing LLMs reading, editing and writing neural-network weights directly. I wanted to try it myself, on something small enough to inspect closely.</p>
 
@@ -64,9 +66,9 @@
         </tbody>
       </table>
 
-      <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties.</p>
+      <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties. The two-layer and one-layer networks were also checked on all 81 million pairs of 4-digit numbers, with no errors.</p>
 
-      <p>The smallest is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on. Passes 1–4 build the digit products, and 5 and 6 gather each column. After that, each pass subtracts 10 from any column whose value is still above 9. The biggest possible column, from 9999 × 9999, is 350 and needs 35 subtractions, so 41 passes cover every problem, and pass 42 writes out the digits. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
+      <p>The smallest of these is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on. Passes 1–4 build the digit products, and 5 and 6 gather each column. After that, each pass subtracts 10 from any column whose value is still above 9. The biggest possible column, from 9999 × 9999, is 350 and needs 35 subtractions, so 41 passes cover every problem, and pass 42 writes out the digits. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
 
       <figure>
         <img src="interp_weights.png" width="2622" height="1199" alt="Every weight matrix of the 487-weight network" loading="lazy">
@@ -92,7 +94,7 @@
         <li><strong>Two layers.</strong>
           <ul>
             <li>In the first layer, attention reads the digit pairs and nine GELUs add up each column of partial products.</li>
-            <li>In the second layer, three heads look back at the previous two columns, at their sums and the digits already written there, to recover the carry. About 35 GELUs then reduce the total to its last digit.</li>
+            <li>In the second layer, three heads look back at the previous two columns, at their sums and the digits already written there, to recover the carry. 69 GELUs then reduce the total to its last digit.</li>
             <li>This is close to what Bai et al. found inside their trained model: attention picks out the digit pairs for each column and stashes intermediate results at earlier positions for later steps to read.</li>
           </ul>
         </li>
@@ -115,7 +117,7 @@
       <h2>Letting it stop early</h2>
       <p>Most problems don’t need 41 passes. A column is done once it has been brought below 10, which takes 6 passes plus one per 10 in its value, and random problems have much smaller columns than 9999 × 9999. So I asked both models to edit the 364-weight network so that it shows when it’s done and stays right if you keep running it.</p>
       <ul>
-        <li><strong>Opus’s edit</strong> removes the one-shot readout, so the answer is right on every pass from the moment the last subtraction finishes. It adds a “busy” token, <code>*</code>, that wins at any answer position whose column still needs work. You stop at the first pass with no <code>*</code>. This version has 355 nonzero weights, 9 fewer than the original.</li>
+        <li><strong>Opus’s edit</strong> removes the one-shot readout, so the answer is right on every pass from the moment the last subtraction finishes. It adds a “busy” token, <code>*</code>, that wins at any answer position whose column still needs work. You stop at the first pass with no <code>*</code>. This version has 355 nonzero weights, 9 fewer than the original and the smallest network in this post.</li>
         <li><strong>Astra’s edit</strong> keeps its readout but makes repeating it harmless. You stop once the gap between two of the output scores drops below a threshold. This version has 365 nonzero weights, one more than the original.</li>
       </ul>
       <p>Both are strictly correct at every pass count from 42 to 64 (Opus’s from 41). Each was checked on a fresh million problems, and on all million pairs with both numbers between 9000 and 9999, where the biggest columns are. Using their own stopping signals, they take 15–16 passes on a typical random problem instead of 42, and never more than 42.</p>
