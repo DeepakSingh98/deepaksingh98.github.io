@@ -159,6 +159,7 @@ footer.social { margin-top: 5rem; }
 .post li { margin-bottom: 0.35rem; text-wrap: pretty; }
 .post li > ul { margin: 0.35rem 0 0; }
 .post strong { color: var(--ink); font-weight: 600; }
+.post code { font-size: 0.9em; padding: 0.05em 0.3em; border-radius: 4px; background: var(--wash); color: var(--ink); }
 .post p a, .post li a { text-decoration-color: var(--mute); text-underline-offset: 0.15em; }
 .post p a:hover, .post li a:hover { text-decoration-color: var(--ink); }
 .post table { border-collapse: collapse; margin: 0.4rem 0 1.4rem; font-size: 0.95rem; }

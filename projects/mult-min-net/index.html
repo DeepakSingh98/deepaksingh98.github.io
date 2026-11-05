@@ -66,7 +66,7 @@
 
       <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties.</p>
 
-      <p>The smallest is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on: passes 1–4 build the digit products, 5 and 6 gather each column, 7–41 subtract 10 whenever a column’s value is above 9, and pass 42 writes out the digit. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
+      <p>The smallest is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on. Passes 1–4 build the digit products, and 5 and 6 gather each column. After that, each pass subtracts 10 from any column whose value is still above 9. The biggest possible column, from 9999 × 9999, is 350 and needs 35 subtractions, so 41 passes cover every problem, and pass 42 writes out the digits. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
 
       <figure>
         <img src="interp_weights.png" width="2622" height="1199" alt="Every weight matrix of the 487-weight network" loading="lazy">
@@ -112,11 +112,20 @@
       <p>All three get the carry partly by reading the answer digits they’ve already written. That’s fair game, since it’s exactly what greedy decoding gives you, but it does mean they don’t recompute the whole carry chain from scratch at each digit.</p>
       <p>These are upper bounds, not proven minimums. Astra’s own guess for the one-layer floor is somewhere in the high hundreds.</p>
 
+      <h2>Letting it stop early</h2>
+      <p>Most problems don’t need 41 passes. A column is done once it has been brought below 10, which takes 6 passes plus one per 10 in its value, and random problems have much smaller columns than 9999 × 9999. So I asked both models to edit the 364-weight network so that it shows when it’s done and stays right if you keep running it.</p>
+      <ul>
+        <li><strong>Opus’s edit</strong> removes the one-shot readout, so the answer is right on every pass from the moment the last subtraction finishes. It adds a “busy” token, <code>*</code>, that wins at any answer position whose column still needs work. You stop at the first pass with no <code>*</code>. This version has 355 nonzero weights, 9 fewer than the original.</li>
+        <li><strong>Astra’s edit</strong> keeps its readout but makes repeating it harmless. You stop once the gap between two of the output scores drops below a threshold. This version has 365 nonzero weights, one more than the original.</li>
+      </ul>
+      <p>Both are strictly correct at every pass count from 42 to 64 (Opus’s from 41). Each was checked on a fresh million problems, and on all million pairs with both numbers between 9000 and 9999, where the biggest columns are. Using their own stopping signals, they take 15–16 passes on a typical random problem instead of 42, and never more than 42.</p>
+      <p>The floor of 6 passes, and the long tail, come from how the block does mod 10: subtracting 10 once per pass is cheap in weights and expensive in passes. The one-layer network makes the opposite trade, taking a column sum to its last digit in a single MLP, and needs 927 weights to do it.</p>
+
       <h2>Why I care</h2>
       <p>What I find cool is that the model had to decide where the computation should live. Different designs trade stored weights for repeated computation in different ways, and you end up with circuits small enough to read in an afternoon.</p>
       <p>This connects to my earlier work on algorithmic reasoning: how networks represent intermediate computations and reuse them across steps. Writing those computations directly gives me another way to study them. I have some more ambitious experiments underway, and I’m excited to share them soon.</p>
 
-      <p>The three networks, the programs that build them, and a script that checks them on your own random problems are <a href="https://github.com/DeepakSingh98/mult-min-net">on GitHub</a>.</p>
+      <p>All five networks, the programs that build them, and a script that checks them on your own random problems are <a href="https://github.com/DeepakSingh98/mult-min-net">on GitHub</a>.</p>
 
       <ul class="links">
         <li><a href="https://github.com/DeepakSingh98/mult-min-net"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg>GitHub</a></li>
