@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4-digit multiplication in 487 nonzero weights · Deepak Singh</title>
+<meta name="description" content="An LLM set every weight of a small transformer that multiplies 4-digit numbers, with no training: 487 nonzero weights in two layers.">
+<meta property="og:title" content="4-digit multiplication in 487 nonzero weights with 0 training">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://deepaksingh98.github.io/projects/mult-min-net/">
+<meta name="theme-color" content="#151513">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/style.css">
+<script src="../../assets/theme.js"></script>
+</head>
+<body>
+<div class="page">
+  <button class="theme-toggle" type="button" aria-label="Toggle dark mode"><svg aria-hidden="true"><use href="../../assets/icons.svg#contrast"/></svg></button>
+  <main>
+    <a class="back" href="../../">← Deepak Singh</a>
+
+    <article class="detail post">
+      <svg class="icon" aria-hidden="true"><use href="../../assets/icons.svg#mult"/></svg>
+      <p class="date">November 5, 2026</p>
+      <h1>4-digit multiplication in 487 nonzero weights with 0 training</h1>
+
+      <p>A couple of days ago, Rikiya Takehi et al. published <a href="https://rikiyat.github.io/blog/weight-space-programming/">Sparks of Weight-Space Programming</a>, showing LLMs reading, editing and writing neural-network weights directly. I wanted to try it myself, on something small enough to inspect closely.</p>
+
+      <p>Four-digit multiplication is a good target, because it’s surprisingly hard for a transformer to learn with plain training:</p>
+      <ul>
+        <li><a href="https://arxiv.org/abs/2405.14838">Deng et al.</a> got there by gradually removing the chain of thought during training.</li>
+        <li><a href="https://arxiv.org/abs/2510.00184">Bai et al.</a> reverse-engineered a successful model and found that it stores partial products at earlier positions for later steps to retrieve. Their standard fixed-length training runs failed to learn the dependencies the middle digits need, partial products and carries from earlier columns. Supervising an intermediate running sum helped, and an <a href="https://openreview.net/pdf/05b83c4c38054fdf22cdb9fa874520ecf06a7a96.pdf">updated version</a> also reports 99.9% validation accuracy from mixing shorter multiplication problems into training.</li>
+      </ul>
+
+      <p>Train the fixed-length task naively and it stalls. In my implementation of their two-layer setup, the model reached 0.5% exact match after 300,000 updates. Even the strongest continuation I tried, turning dropout off and resetting the optimizer between blocks, reached only 14% after another 300,000.</p>
+
+      <p>So instead of training it, I asked an LLM to write it.</p>
+
+      <h2>Writing a multiplier</h2>
+      <p>I gave GPT-6 Astra three things:</p>
+      <ul>
+        <li>the task;</li>
+        <li>the architecture: a 14.2M-parameter, two-layer GPT-2-style transformer based on Bai et al.’s setup, with a reduced vocabulary;</li>
+        <li>a Python sandbox.</li>
+      </ul>
+      <p>Then I asked it to set every weight with code, without gradient updates or optimizer training. Its network scored 10,000 out of 10,000 on held-out problems before a single training step. (Claude Opus 5.5 did the same, and both landed on essentially the same algorithm.)</p>
+      <p>The network writes the product one digit at a time, least significant first, the way you would on paper.</p>
+      <p>That worked, which raised the obvious question: how small can it get?</p>
+
+      <h2>Making it smaller</h2>
+      <p>I asked Astra to shrink it.</p>
+      <ul>
+        <li><strong>Free to choose:</strong> the number of layers and heads, and every width.</li>
+        <li><strong>Fixed:</strong> a GPT-2-style block, with causal attention, a GELU MLP, LayerNorm, and tied input and output embeddings.</li>
+        <li><strong>Score:</strong> the number of nonzero weights.</li>
+      </ul>
+
+      <table>
+        <thead><tr><th>Construction</th><th class="num">Nonzero weights</th></tr></thead>
+        <tbody>
+          <tr><td>Two layers</td><td class="num"><strong>487</strong></td></tr>
+          <tr><td>One layer</td><td class="num"><strong>927</strong></td></tr>
+          <tr><td>One block, looped 42 times</td><td class="num"><strong>364</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties.</p>
+
+      <figure>
+        <img src="interp_weights.png" width="2622" height="1199" alt="Every weight matrix of the 487-weight network" loading="lazy">
+        <figcaption>Every weight matrix of the two-layer network, cropped to the 21 of 512 residual dimensions it actually uses. Grey is exactly zero.</figcaption>
+      </figure>
+
+      <p>For scale, Astra’s original 14.2M-parameter build used 224,420 nonzero weights, so the two-layer version uses about 461× fewer. Each took about 30 Python runs.</p>
+      <p>I also tried a looped version: one block applied 42 times, with its weights counted once. It needs only 364 nonzero weights.</p>
+
+      <h2>Where the computation lives</h2>
+      <p>The fun part is seeing where Astra put the arithmetic.</p>
+
+      <figure>
+        <img src="interp_attention.png" width="2700" height="990" alt="Attention patterns of every active head" loading="lazy">
+        <figcaption>Attention on 4,321 × 8,765. Each row is the position that predicts answer digit cₖ. Layer-1 heads 0–3 each lock onto one digit of a; heads 4–7 slide along b, so position k collects exactly the pairs aⱼbₖ₋ⱼ in its column. Layer-2 heads 0–2 look back one, two and three positions for the carry.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="interp_mlp.png" width="2700" height="810" alt="Layer 1 MLP, layer 2 MLP and readout across 4,000 problems" loading="lazy">
+        <figcaption>Across 4,000 random problems: the first MLP’s output is the column sum, the second MLP is a staircase that subtracts 20 at every multiple of 10, and the readout’s winning digit is the column total mod 10.</figcaption>
+      </figure>
+
+      <ul>
+        <li><strong>Two layers.</strong>
+          <ul>
+            <li>In the first layer, attention reads the digit pairs and nine GELUs add up each column of partial products.</li>
+            <li>In the second layer, three heads look back at the previous two columns, at their sums and the digits already written there, to recover the carry. About 35 GELUs then reduce the total to its last digit.</li>
+            <li>This is close to what Bai et al. found inside their trained model: attention picks out the digit pairs for each column and stashes intermediate results at earlier positions for later steps to read.</li>
+          </ul>
+        </li>
+        <li><strong>One layer.</strong>
+          <ul>
+            <li>Sixteen attention heads do the digit multiplications themselves, by computing nonlinear averages over pairs of digits.</li>
+            <li>A single GELU MLP turns each column sum into its last digit with a sawtooth.</li>
+          </ul>
+        </li>
+        <li><strong>Looped.</strong>
+          <ul>
+            <li>A counter in the residual stream sequences a little program: multiply, gather the column, then take it mod 10 by repeated subtraction, one pass at a time.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <p>All three get the carry partly by reading the answer digits they’ve already written. That’s fair game, since it’s exactly what greedy decoding gives you, but it does mean they don’t recompute the whole carry chain from scratch at each digit.</p>
+      <p>These are upper bounds, not proven minimums. Astra’s own guess for the one-layer floor is somewhere in the high hundreds.</p>
+
+      <h2>Why I care</h2>
+      <p>What I find cool is that the model had to decide where the computation should live. Different designs trade stored weights for repeated computation in different ways, and you end up with circuits small enough to read in an afternoon.</p>
+      <p>This connects to my earlier work on algorithmic reasoning: how networks represent intermediate computations and reuse them across steps. Writing those computations directly gives me another way to study them. I have some more ambitious experiments underway, and I’m excited to share them soon.</p>
+
+      <p>The three networks, the programs that build them, and a script that checks them on your own random problems are <a href="https://github.com/DeepakSingh98/mult-min-net">on GitHub</a>.</p>
+
+      <ul class="links">
+        <li><a href="https://github.com/DeepakSingh98/mult-min-net"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg>GitHub</a></li>
+      </ul>
+    </article>
+  </main>
+
+  <footer class="social">
+    <a href="https://x.com/deepaksinghml" aria-label="X" title="X"><svg aria-hidden="true"><use href="../../assets/icons.svg#x"/></svg></a>
+    <a href="https://www.linkedin.com/in/deepak-t-singh/" aria-label="LinkedIn" title="LinkedIn"><svg aria-hidden="true"><use href="../../assets/icons.svg#linkedin"/></svg></a>
+    <a href="https://github.com/DeepakSingh98" aria-label="GitHub" title="GitHub"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg></a>
+  </footer>
+</div>
+</body>
+</html>
