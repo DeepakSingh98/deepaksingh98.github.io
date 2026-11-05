@@ -8,6 +8,8 @@
 <meta property="og:title" content="4-digit multiplication in 355 nonzero weights with 0 training">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://deepaksingh98.github.io/projects/mult-min-net/">
+<meta property="og:image" content="https://deepaksingh98.github.io/projects/mult-min-net/hero_355.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#151513">
 <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../assets/style.css">
@@ -25,6 +27,11 @@
       <h1>4-digit multiplication in 355 nonzero weights with 0 training</h1>
 
       <p class="lede">I had LLMs write every weight of small transformers that multiply 4-digit numbers, with no training. A two-layer version uses 487 nonzero weights and gets all 81 million pairs of 4-digit numbers right. A single block run in a loop gets it down to 355, and signals when it’s done.</p>
+
+      <figure>
+        <img src="hero_355.png" width="1920" height="1080" alt="Every weight of the 355-weight looped network">
+        <figcaption>All 355 nonzero weights of the looped network, laid out as one block. The bright squares are the whole program.</figcaption>
+      </figure>
 
       <p>A couple of days ago, Rikiya Takehi et al. published <a href="https://rikiyat.github.io/blog/weight-space-programming/">Sparks of Weight-Space Programming</a>, showing LLMs reading, editing and writing neural-network weights directly. I wanted to try it myself, on something small enough to inspect closely.</p>
 
@@ -71,8 +78,8 @@
       <p>The smallest of these is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on. Passes 1–4 build the digit products, and 5 and 6 gather each column. After that, each pass subtracts 10 from any column whose value is still above 9. The biggest possible column, from 9999 × 9999, is 350 and needs 35 subtractions, so 41 passes cover every problem, and pass 42 writes out the digits. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
 
       <figure>
-        <img src="interp_weights.png" width="2622" height="1199" alt="Every weight matrix of the 487-weight network" loading="lazy">
-        <figcaption>Every weight matrix of the two-layer network, cropped to the 21 of 512 residual dimensions it actually uses. Grey is exactly zero.</figcaption>
+        <img src="weights_dark.png" width="1920" height="1080" alt="Every weight matrix of the 487-weight network" loading="lazy">
+        <figcaption>Every weight matrix of the two-layer network, cropped to the 21 of 512 residual dimensions it actually uses. Dark squares are exactly zero.</figcaption>
       </figure>
 
       <p>For scale, Astra’s original 14.2M-parameter build used 224,420 nonzero weights, so the reused block uses about 617× fewer and the two-layer version about 461× fewer. Each took about 30 Python runs.</p>
@@ -81,12 +88,12 @@
       <p>The fun part is seeing where Astra put the arithmetic.</p>
 
       <figure>
-        <img src="interp_attention.png" width="2700" height="990" alt="Attention patterns of every active head" loading="lazy">
-        <figcaption>Attention on 4,321 × 8,765. Each row is the position that predicts answer digit cₖ. Layer-1 heads 0–3 each lock onto one digit of a; heads 4–7 slide along b, so position k collects exactly the pairs aⱼbₖ₋ⱼ in its column. Layer-2 heads 0–2 look back one, two and three positions for the carry.</figcaption>
+        <img src="attention_dark.png" width="1920" height="1080" alt="Attention patterns of every active head" loading="lazy">
+        <figcaption>Attention on 4,321 × 8,765, digits written last-first. Each row is the position that predicts answer digit cₖ. In layer 1, four heads each lock onto one digit of 4321 and four slide along 8765, so position k collects exactly the pairs aⱼbₖ₋ⱼ in its column. In layer 2, three heads look back one, two and three positions for the carry.</figcaption>
       </figure>
 
       <figure>
-        <img src="interp_mlp.png" width="2700" height="810" alt="Layer 1 MLP, layer 2 MLP and readout across 4,000 problems" loading="lazy">
+        <img src="mlp_dark.png" width="1920" height="1080" alt="Layer 1 MLP, layer 2 MLP and readout across 4,000 problems" loading="lazy">
         <figcaption>Across 4,000 random problems: the first MLP’s output is the column sum, the second MLP is a staircase that subtracts 20 at every multiple of 10, and the readout’s winning digit is the column total mod 10.</figcaption>
       </figure>
 
@@ -121,6 +128,11 @@
         <li><strong>Astra’s edit</strong> keeps its readout but makes repeating it harmless. You stop once the gap between two of the output scores drops below a threshold. This version has 365 nonzero weights, one more than the original.</li>
       </ul>
       <p>Both are strictly correct at every pass count from 42 to 64 (Opus’s from 41). Each was checked on a fresh million problems, and on all million pairs with both numbers between 9000 and 9999, where the biggest columns are. Using their own stopping signals, they take 15–16 passes on a typical random problem instead of 42, and never more than 42.</p>
+
+      <figure>
+        <img src="loop_passes_dark.png" width="1920" height="1080" alt="Passes used by the 355-weight network on a million problems" loading="lazy">
+        <figcaption>How many passes the 355-weight version runs before it signals it’s done, on a million fresh random problems. The original always ran 42.</figcaption>
+      </figure>
       <p>The floor of 6 passes, and the long tail, come from how the block does mod 10: subtracting 10 once per pass is cheap in weights and expensive in passes. The one-layer network makes the opposite trade, taking a column sum to its last digit in a single MLP, and needs 927 weights to do it.</p>
 
       <h2>Why I care</h2>
