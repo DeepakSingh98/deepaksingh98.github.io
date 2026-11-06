@@ -73,7 +73,7 @@
         </tbody>
       </table>
 
-      <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties. The two-layer and one-layer networks were also checked on all 81 million pairs of 4-digit numbers, with no errors.</p>
+      <p>Each network got all of a fresh million problems right, both with float32 weights and with weights rounded to bfloat16 (float32 compute in both cases). The correct digit beats every other token outright: no ties. All three were also checked on all 81 million pairs of 4-digit numbers, with no errors.</p>
 
       <p>The smallest of these is the reused block, and it always runs exactly 42 times. The number of passes is part of the network’s configuration, which Astra picked; the network doesn’t decide when to stop, and every problem gets all 42. A counter in the residual stream tells the block which pass it’s on. Passes 1–4 build the digit products, and 5 and 6 gather each column. After that, each pass subtracts 10 from any column whose value is still above 9. The biggest possible column, from 9999 × 9999, is 350 and needs 35 subtractions, so 41 passes cover every problem, and pass 42 writes out the digits. The schedule is timed exactly: run it 41 or 43 times and it gets all of 1,000 test problems wrong.</p>
 
