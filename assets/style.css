@@ -1,24 +1,34 @@
 /* Personal site. Plain CSS, no build step, no external fonts or scripts. */
-/* Dark by default; the toggle sets data-theme="light" for the light palette. */
+/* Dark by default; the toggle sets data-theme="light" for the light palette. Rules: style/STYLE.md. */
 :root {
   --paper: #151513;
   --ink: #ecebe5;
   --ink-2: #c9c7bf;
-  --mute: #8f8d85;
+  --mute: #9a988f;
   --rule: #2f2e29;
   --wash: #21201d;
+  --cell: #2b2a26;
+  --accent: #ff8a3d;
+  --blue: #45a8ff;
+  --green: #6fd08c;
   --serif: "Iowan Old Style", Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --column: 42rem;
+  --plate: 56rem;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
   --paper: #f8f6f0;
   --ink: #1a1b1a;
   --ink-2: #3b3d39;
-  --mute: #75776f;
+  --mute: #6a6c64;
   --rule: #e2ded3;
   --wash: #efebe1;
+  --cell: #e2ded3;
+  --accent: #b44f0a;
+  --blue: #1b6fc4;
+  --green: #1f8a52;
   color-scheme: light;
 }
 
@@ -34,8 +44,9 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 a { color: inherit; }
+::selection { background: var(--accent); color: #151513; }
 img { display: block; max-width: 100%; }
-:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
 /* Layout: one column, footer pinned to the bottom of short pages. */
 .page {
@@ -72,7 +83,7 @@ main { flex: 1; }
 .theme-toggle svg { width: 1.05rem; height: 1.05rem; }
 
 h1 { font: 400 3rem/1.05 var(--serif); letter-spacing: -0.028em; margin: 0; text-wrap: balance; }
-h2 { font: 500 0.95rem/1.4 var(--sans); color: var(--ink); margin: 0 0 1.2rem; }
+h2 { font: 400 1.6rem/1.25 var(--serif); letter-spacing: -0.012em; color: var(--ink); margin: 0 0 1.2rem; }
 .lede { font: 400 1.3rem/1.5 var(--serif); letter-spacing: -0.006em; margin: 0; text-wrap: pretty; }
 
 /* Home: edge-to-edge photo that dissolves into the page, the name set where it fades. */
@@ -120,7 +131,7 @@ h2 { font: 500 0.95rem/1.4 var(--sans); color: var(--ink); margin: 0 0 1.2rem; }
 .project:hover { background: var(--wash); }
 .project .name { display: block; font: 400 1.25rem/1.3 var(--serif); letter-spacing: -0.008em; }
 .project .desc { display: block; font-size: 0.9rem; line-height: 1.45; color: var(--mute); margin-top: 0.1rem; text-wrap: balance; }
-.project .arrow { color: var(--mute); opacity: 0; transform: translateX(-5px); transition: opacity 0.18s ease, transform 0.18s ease; }
+.project .arrow { color: var(--accent); opacity: 0; transform: translateX(-5px); transition: opacity 0.18s ease, transform 0.18s ease; }
 .project:hover .arrow, .project:focus-visible .arrow { opacity: 1; transform: none; }
 .icon { display: block; width: 2.75rem; height: 2.75rem; color: var(--ink); }
 
@@ -132,6 +143,9 @@ h2 { font: 500 0.95rem/1.4 var(--sans); color: var(--ink); margin: 0 0 1.2rem; }
 .detail h1 { margin-bottom: 1.1rem; }
 .detail .lede { margin-bottom: 1.4rem; }
 .detail p { margin: 0 0 1.1rem; color: var(--ink-2); text-wrap: pretty; }
+.detail figure { margin: 2rem 0; }
+.detail figure img { width: 100%; height: auto; }
+:root[data-theme="light"] .detail figure img { border-radius: 10px; }
 .links { list-style: none; display: flex; flex-wrap: wrap; gap: 0.7rem; margin: 2.4rem 0 0; padding: 0; }
 .links a {
   display: inline-flex;
@@ -154,28 +168,33 @@ footer.social { margin-top: 5rem; }
 .post { max-width: var(--column); }
 .post .date { font-size: 0.85rem; color: var(--mute); margin: 0 0 0.6rem; }
 .post h1 { font-size: 2.6rem; }
-.post h2 { font: 400 1.6rem/1.25 var(--serif); letter-spacing: -0.012em; margin: 3rem 0 1rem; }
+.post h2 { margin: 3rem 0 1rem; }
 .post ul { margin: 0 0 1.1rem; padding-left: 1.2rem; color: var(--ink-2); }
 .post li { margin-bottom: 0.35rem; text-wrap: pretty; }
 .post li > ul { margin: 0.35rem 0 0; }
 .post strong { color: var(--ink); font-weight: 600; }
-.post code { font-size: 0.9em; padding: 0.05em 0.3em; border-radius: 4px; background: var(--wash); color: var(--ink); }
+.post code { font-family: var(--mono); font-size: 0.85em; padding: 0.05em 0.3em; border-radius: 4px; background: var(--wash); color: var(--ink); }
 .post p a, .post li a { text-decoration-color: var(--mute); text-underline-offset: 0.15em; }
-.post p a:hover, .post li a:hover { text-decoration-color: var(--ink); }
+.post p a:hover, .post li a:hover { text-decoration-color: var(--accent); }
 .post table { border-collapse: collapse; margin: 0.4rem 0 1.4rem; font-size: 0.95rem; }
 .post th, .post td { padding: 0.45rem 1.4rem 0.45rem 0; border-bottom: 1px solid var(--rule); text-align: left; }
 .post th { font-weight: 500; color: var(--mute); }
 .post .num { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; }
 .post figure { margin: 2rem 0; }
-.post figure img { width: 100%; height: auto; border-radius: 10px; background: #fff; }
-.post figcaption { margin-top: 0.7rem; font-size: 0.85rem; line-height: 1.5; color: var(--mute); text-wrap: pretty; }
+.detail figcaption { margin-top: 0.7rem; font-size: 0.85rem; line-height: 1.5; color: var(--mute); text-wrap: pretty; }
+
+/* Plates run wider than the text; their captions stay on the reading column. */
+@media (min-width: 62rem) {
+  .post figure { width: var(--plate); margin-left: calc((var(--column) - var(--plate)) / 2); }
+  .post figcaption { max-width: var(--column); margin-left: auto; margin-right: auto; }
+}
 
 @media (max-width: 640px) {
   .page { padding: 4.5rem 1.4rem 2rem; }
   .theme-toggle { top: 0.8rem; right: 0.8rem; }
   h1 { font-size: 2.5rem; }
   .post h1 { font-size: 2.05rem; }
-  .post h2 { font-size: 1.4rem; }
+  h2, .post h2 { font-size: 1.4rem; }
   .hero { aspect-ratio: auto; height: 210px; }
   .hero img { object-position: 15% 100%; }
   .hero figcaption { right: 1.4rem; bottom: 0.7rem; }

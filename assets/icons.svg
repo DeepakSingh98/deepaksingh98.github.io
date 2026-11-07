@@ -1,23 +1,118 @@
 <svg xmlns="http://www.w3.org/2000/svg">
-  <!-- Project icons: a 32x32 tile in currentColor with the glyph cut in the page colour. One symbol per project. -->
+  <!-- Project icons: a 6x6 cell grid in the style of the weight figures, like one tiny plate. One symbol per project. -->
   <symbol id="latch" viewBox="0 0 32 32">
-    <rect width="32" height="32" rx="7.5" fill="currentColor"/>
-    <path d="M11 7.5v17h11" fill="none" style="stroke: var(--paper)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="1.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="1.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="6.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="11.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="16.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="21.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="16.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="21.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="26.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
   </symbol>
   <symbol id="qwenlab" viewBox="0 0 32 32">
-    <rect width="32" height="32" rx="7.5" fill="currentColor"/>
-    <g style="fill: var(--paper)">
-      <circle cx="9.5" cy="12" r="2.35"/>
-      <circle cx="16" cy="12" r="2.35"/>
-      <circle cx="22.5" cy="12" r="2.35"/>
-      <circle cx="9.5" cy="20" r="2.35"/>
-      <circle cx="16" cy="20" r="2.35"/>
-      <circle cx="22.5" cy="20" r="2.35"/>
-    </g>
+    <rect x="1.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="6.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="11.5" y="6.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="16.5" y="6.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="21.5" y="6.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="26.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="11.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="11.5" y="11.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="16.5" y="11.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="21.5" y="11.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="26.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="16.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="11.5" y="16.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="16.5" y="16.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="21.5" y="16.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="26.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="21.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="11.5" y="21.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="16.5" y="21.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="21.5" y="21.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="26.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
   </symbol>
   <symbol id="mult" viewBox="0 0 32 32">
-    <rect width="32" height="32" rx="7.5" fill="currentColor"/>
-    <path d="M10.5 10.5l11 11M21.5 10.5l-11 11" fill="none" style="stroke: var(--paper)" stroke-width="2.75" stroke-linecap="round"/>
+    <rect x="1.5" y="1.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="6.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="1.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="1.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="1.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="6.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="11.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="6.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="26.5" y="6.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="11.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="16.5" y="11.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="21.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="11.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="16.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="16.5" y="16.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="21.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="16.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="6.5" y="21.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="11.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="21.5" width="4" height="4" style="fill: var(--accent)"/>
+    <rect x="26.5" y="21.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="1.5" y="26.5" width="4" height="4" style="fill: var(--blue)"/>
+    <rect x="6.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="11.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="16.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="21.5" y="26.5" width="4" height="4" style="fill: var(--cell)"/>
+    <rect x="26.5" y="26.5" width="4" height="4" style="fill: var(--accent)"/>
   </symbol>
   <symbol id="contrast" viewBox="0 0 16 16">
     <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/>

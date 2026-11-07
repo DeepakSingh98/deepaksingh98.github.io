@@ -25,6 +25,10 @@
       <p class="lede">A compiler that turns a PyTorch training step into one GPU program.</p>
       <p>Latch compiles supported PyTorch training code into a single program for the forward pass, loss, backward pass and optimizer update. It is an MIT-licensed research preview for NVIDIA H100 GPUs.</p>
 
+      <figure>
+        <img src="latch-chart.svg" width="1200" height="675" alt="Latch against compiled PyTorch on an H100: 40% less update time to loss 3.30 on TinyMoE, 2.75× faster training updates, and 3.5× faster test-time adaptation with GradLev.">
+      </figure>
+
       <ul class="links">
         <li><a href="https://github.com/DeepakSingh98/latch"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg>GitHub</a></li>
         <li><a href="https://deepaksingh98.github.io/latch/site/introducing-latch.html">Project site <span class="ext" aria-hidden="true">↗</span></a></li>
