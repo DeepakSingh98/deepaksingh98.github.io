@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is learning about the journey or the destination? · Deepak Singh</title>
+<meta name="description" content="Gradient descent is how networks learn to solve problems. If you hand it a perfect solution you’d expect it to stay put. Oddly enough, it doesn’t.">
+<meta property="og:title" content="Is learning about the journey or the destination?">
+<meta property="og:description" content="Gradient descent is how networks learn to solve problems. If you hand it a perfect solution you’d expect it to stay put. Oddly enough, it doesn’t.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://deepaksingh98.github.io/projects/journey-or-destination/">
+<meta property="og:image" content="https://deepaksingh98.github.io/projects/journey-or-destination/followup_landscape.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#151513">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/style.css">
+<script src="../../assets/theme.js"></script>
+</head>
+<body>
+<div class="page">
+  <button class="theme-toggle" type="button" aria-label="Toggle dark mode"><svg aria-hidden="true"><use href="../../assets/icons.svg#contrast"/></svg></button>
+  <main>
+    <a class="back" href="../../">← Deepak Singh</a>
+
+    <article class="detail post">
+      <svg class="icon" aria-hidden="true"><use href="../../assets/icons.svg#mult"/></svg>
+      <p class="date">November 8, 2026</p>
+      <h1>Is learning about the journey or the destination?</h1>
+
+      <p>Gradient descent is how networks learn to solve problems. It follows the slope of the loss function, one small step at a time. The loss is there to punish bad solutions, so if you hand gradient descent a perfect one you’d expect it to stay put.</p>
+
+      <p>Oddly enough, it doesn’t.</p>
+
+      <p>In my <a href="https://deepaksingh98.github.io/projects/mult-min-net/">last post</a> LLMs set every weight of small transformers that multiply. This is <a href="https://rikiyat.github.io/blog/weight-space-programming/">weight-space programming</a> and I’ll call the results programmed networks. Opus has since programmed one that multiplies numbers of any length with no mistakes in 3 million problems, so I handed it to gradient descent and kept training it with Adam, and within 25 steps it got every problem wrong.</p>
+
+      <figure>
+        <img src="followup_anylen_wave.png" width="1920" height="1080" alt="A wave that multiplies">
+        <figcaption>The programmed network multiplying two 12-digit numbers. Each answer digit locks in at the outlined pass and stays right.</figcaption>
+      </figure>
+
+      <p><a href="https://doi.org/10.1109/72.279181">Bengio, Simard, and Frasconi</a> described a trade-off in 1994 that explains part of this. To hold information over many steps a network has to ignore small nudges, but a gradient only measures small nudges, so the better a network holds information the less its gradient can see. This network is built to hold information by snapping its state back to exact values on every pass, which is exactly the kind of thing the gradient can’t see.</p>
+
+      <h2>Why it matters</h2>
+      <p>Gradient descent leans toward simple and smooth solutions and that’s <a href="https://arxiv.org/abs/2208.12591">probably part</a> of why deep learning generalizes. For language, where little is exact, that may be the right taste. Exact computation over many steps is a different story and it’s where trained models struggle. Language models do arithmetic with a <a href="https://arxiv.org/abs/2410.21272">bag of heuristics</a> and transformers often <a href="https://arxiv.org/abs/2207.02098">fail on inputs longer</a> than the ones they saw. The usual explanation is that the algorithm is hard to find, but programmed networks point to a second one, which is that even when you hand gradient descent the algorithm it doesn’t stay. That matters for any model that carries state across many steps, like <a href="https://arxiv.org/abs/2502.05171">recurrent-depth models</a> and <a href="https://arxiv.org/abs/2412.06769">Coconut</a>.</p>
+      <p>This was hard to test before because you need the right answer to compare against, and weight-space programming gives you one.</p>
+
+      <h2>Training a programmed network</h2>
+      <p>The network gets every answer right but it’s only about 60% confident, so the loss still pushes on it. There’s a harmless fix, which is to scale up the final layer norm, and that takes the loss to near zero without changing a single answer. The gradient almost ignores it (cosine about 1e-10) and points somewhere fragile instead, where a step of 3e-6 breaks the network on 4-digit problems. Making it confident first doesn’t help either, since it still breaks at the same distance.</p>
+
+      <figure>
+        <img src="followup_landscape.png" width="1920" height="1080" alt="A perfect network on a knife edge" loading="lazy">
+        <figcaption>The loss around the programmed network on 4-digit problems. Along the ridge the harmless fix keeps every answer right and the loss goes to near zero. The white line extends the first training step in a straight line, and the loss dips a little before answers start breaking past about 3e-6.</figcaption>
+      </figure>
+
+      <h2>Training networks it found itself</h2>
+      <p>Is gradient descent this harsh on every network? I kept training three networks it found itself, two Neural GPUs trained on binary multiplication and a looped transformer trained on addition, both as trained and scaled down to the same 60% confidence. Next to them I trained the two programmed networks, the any-length one and the 487-weight two-layer one from the last post, all with the same Adam setup.</p>
+
+      <table>
+        <thead><tr><th>Learning rate</th><th>Found by gradient descent (18 runs)</th><th>Programmed (12 runs)</th></tr></thead>
+        <tbody>
+          <tr><td>Very small</td><td>15 lasted all 2000 steps</td><td>All 256 problems wrong by step 25</td></tr>
+          <tr><td>10× bigger</td><td>4 lasted, and the rest slipped, usually by one problem</td><td>All 256 wrong by step 25</td></tr>
+          <tr><td>100× bigger</td><td>1 lasted, and the rest slipped, usually by one problem</td><td>All 256 wrong by step 25</td></tr>
+          <tr><td>1000× bigger</td><td>None lasted, and most broke by step 25</td><td>All 256 wrong by step 25</td></tr>
+        </tbody>
+      </table>
+
+      <figure>
+        <img src="followup_train.png" width="1920" height="1080" alt="Training nudges its own networks and knocks programmed ones over" loading="lazy">
+      </figure>
+
+      <p>The difference is what the gradient can see. On the trained networks at the same confidence it points partly along the harmless fix (cosine 0.4 to 0.6), and on the programmed ones it’s about 1e-10 or less. So gradient descent nudges every solution, but it can see the ones it found itself and nudges them gently, and it can’t see the programmed ones so it knocks them over.</p>
+
+      <h2>What the gradient can’t see</h2>
+      <p>You can watch Bengio’s trade-off directly. Take the same problem with one digit changed and swap its state into the network some passes before the end, and the network gives that problem’s answer every time, so the earlier state decides the answer. Then ask how much of that change the gradient predicts. Eight passes back it’s less than 1e-27 on the programmed network, at most 0.15% on a trained Neural GPU, and roughly all of it on random networks. The gradient only goes blind once a state is carrying the computation.</p>
+
+      <figure>
+        <img src="followup_tension.png" width="1920" height="1080" alt="The gradient misses what earlier passes decide" loading="lazy">
+      </figure>
+
+      <p>The loop makes it worse. Almost all of the gradient comes from the last pass, and since every pass shares the same weights, the change it asks for lands on all of them. That’s why long problems break first: a step of 3e-6 breaks 4-digit problems, but 3e-7 is enough for 100-digit ones. When I gave the last 22 passes their own copies of the weights (same function), the network survived a 37× larger step and the first failures moved to 4-digit problems. The loop isn’t the whole story though, because the two-layer network has no loop at all and collapses just the same. What the two programmed networks do share is a gradient that can’t see the harmless fix.</p>
+
+      <h2>What’s next</h2>
+      <p>Almost every model learns by gradient descent, and this is a tiny example of where it falls short. It can’t find, or even keep, a solution that I know exists and can check exactly.</p>
+
+      <ul>
+        <li><strong>One fix is the architecture.</strong> The <a href="https://doi.org/10.1162/neco.1997.9.8.1735">LSTM</a> gave held state a path the gradient could pass through, so it could hold information for a long time and still be trained.</li>
+        <li><strong>Another fix is the objective.</strong> Give each pass its own signal, like Bai et al.’s running-sum loss from the last post, and the gradient doesn’t have to see through the whole loop. Programmed networks make that easy to test, since I know what every state should be.</li>
+        <li><strong>The fix I’m most excited about is weight-space programming itself.</strong> A model that writes weights has a second way to learn, one that isn’t limited to what the gradient can see. A model that reads weights can say what a network is actually doing, and you can check it by poking the network instead of trusting its explanation.</li>
+      </ul>
+
+      <p>Here’s the fun part. Every write and every read comes with an answer you can check, and models got very good at math and code once they could practice on checkable answers. Multiplication is just page one of the algorithms textbook. I’ve been working through the rest, and the real prize is a model that can read and write its own weights.</p>
+
+      <figure>
+        <img src="followup_teaser.png" width="1920" height="1080" alt="Multiplication is page one: the multiplier's weights next to nine other programmed networks with their names redacted" loading="lazy">
+      </figure>
+
+      <p><em>Thanks to Damien Teney (<a href="https://x.com/DamienTeney">@DamienTeney</a>), Soumil Bhandari (<a href="https://x.com/SoumilBhandari">@SoumilBhandari</a>), Cheng Lou (<a href="https://x.com/_chenglou">@_chenglou</a>), and Dimitris Papailiopoulos (<a href="https://x.com/DimitrisPapail">@DimitrisPapail</a>) for the questions and pointers.</em></p>
+
+      <p><em><a href="https://github.com/DeepakSingh98/mult-min-net/tree/main/followup">Code: github.com/DeepakSingh98/mult-min-net</a></em></p>
+
+      <ul class="links">
+        <li><a href="https://github.com/DeepakSingh98/mult-min-net/tree/main/followup"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg>GitHub</a></li>
+      </ul>
+
+      <h2>PS</h2>
+      <p>A few other notes that didn’t fit above.</p>
+      <ul>
+        <li><strong>Last post’s questions.</strong>
+          <ul>
+            <li><em>Does it work past 4 digits?</em> (<a href="https://x.com/SoumilBhandari">@SoumilBhandari</a>) Yes. Opus programmed a network with 870 nonzero weights that multiplies numbers of any length. There’s a hand argument that it works at every length, and it has done 3 million problems up to 500 × 500 digits without a mistake.</li>
+            <li><em>Do you need a transformer?</em> (<a href="https://x.com/_chenglou">@_chenglou</a>) Not for that one. It’s a cellular automaton and works like the iterative-array hardware multipliers of the 1960s.</li>
+            <li><em>Is it like what training would find?</em> (<a href="https://x.com/DamienTeney">@DamienTeney</a>) Partly. The <a href="https://arxiv.org/abs/1511.08228">Neural GPU</a> learned the same kind of algorithm in 2015 on binary numbers.</li>
+            <li><em>Could training find these networks?</em> (<a href="https://x.com/DamienTeney">@DamienTeney</a>) Not in my runs.</li>
+          </ul>
+        </li>
+        <li><strong>It’s not just the slow wave.</strong> Opus proposed a second network built on a number-theoretic transform and GPT-6 Astra programmed it. It reads across the whole number at once in the same butterfly pattern as an FFT, and it has the same blind spot, with the gradient recovering at most 2.5e-8 of the change.</li>
+      </ul>
+
+      <figure>
+        <img src="followup_ntt_butterfly.png" width="1920" height="1080" alt="Reading across the whole number" loading="lazy">
+        <figcaption>One attention head of the number-theoretic network multiplying two 8-digit numbers. Nothing above depends on this one, it’s just here because it’s pretty.</figcaption>
+      </figure>
+    </article>
+  </main>
+
+  <footer class="social">
+    <a href="https://x.com/deepaksinghml" aria-label="X" title="X"><svg aria-hidden="true"><use href="../../assets/icons.svg#x"/></svg></a>
+    <a href="https://www.linkedin.com/in/deepak-t-singh/" aria-label="LinkedIn" title="LinkedIn"><svg aria-hidden="true"><use href="../../assets/icons.svg#linkedin"/></svg></a>
+    <a href="https://github.com/DeepakSingh98" aria-label="GitHub" title="GitHub"><svg aria-hidden="true"><use href="../../assets/icons.svg#github"/></svg></a>
+  </footer>
+</div>
+</body>
+</html>
