@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Booby-trapping an LLM with weight-space tripwires · Deepak Singh</title>
+<meta name="description" content="I wrote 120 neurons into Qwen3.8-27B with no training. Abliterated, it answers none of 653 harmful benchmark requests instead of 253.">
+<meta property="og:title" content="Booby-trapping an LLM with weight-space tripwires">
+<meta property="og:description" content="I wrote 120 neurons into Qwen3.8-27B with no training. Abliterated, it answers none of 653 harmful benchmark requests instead of 253.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://deepaksingh98.github.io/projects/safety-wire/">
+<meta property="og:image" content="https://deepaksingh98.github.io/projects/safety-wire/hero27.jpg">
+<meta property="og:image:alt" content="Recorded activity in Qwen3.8-27B: the abliterated ordinary model answers, while 120 written neurons make the trapped model stop.">
+<link rel="canonical" href="https://deepaksingh98.github.io/projects/safety-wire/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#151513">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/style.css">
+<script src="../../assets/theme.js"></script>
+<style>
+  .todo { color: var(--mute); border-left: 2px solid var(--accent); padding-left: .8rem; font-style: italic; }
+  .small { color: var(--mute); font-size: .9rem; }
+  .wrap { overflow-x: auto; }
+  table.wide td:not(:first-child), table.wide th:not(:first-child) { white-space: nowrap; text-align: right; font-family: var(--mono); font-size: .85rem; }
+  table.wide td:first-child { min-width: 9.5rem; }
+  table.wide th { white-space: normal !important; vertical-align: bottom; }
+  details.nums summary { color: var(--mute); cursor: pointer; font-size: .9rem; }
+  .post figure > a { display: block; }
+  .explorer iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #151513; }
+  @media (max-width: 640px) { .explorer iframe { aspect-ratio: 4 / 5; } }
+  :root[data-theme="light"] .explorer iframe { border-radius: 10px; }
+  /* inline figures: dark plates in both themes, like the images */
+  .post .plate { background: #151513; color: #ecebe5; padding: 1.5rem 1.6rem 1.6rem; }
+  :root[data-theme="light"] .post .plate { border-radius: 10px; }
+  .plate small { display: block; font: 400 .78rem/1.35 var(--sans); color: #9a988f; margin-top: .35em; }
+  .plate .fr { color: #45a8ff; } .plate .or { color: #ff8a3d; } .plate .mu { color: #9a988f; font-style: italic; }
+
+  .standin { display: grid; grid-template-columns: 10.5rem 1fr 1.3fr; font: 400 1.18rem/1.3 var(--serif); }
+  .standin > div { padding: .95rem 1.1rem .95rem 0; border-top: 1px solid #2f2e29; }
+  .standin .rl, .standin .head { font: 400 .8rem/1.35 var(--sans); color: #9a988f; }
+  .standin .rl { padding-top: 1.15rem; }
+  .standin .head { border-top: 0; padding-top: 0; color: #ecebe5; font-size: .92rem; }
+  .standin .head:first-child { visibility: hidden; }
+  .standin .req { font-size: 1.02rem; line-height: 1.4; color: #c9c7bf; }
+  .standin .bars { display: grid; gap: .3em; padding: .2em 0; } .standin .bars i { height: .56em; border-radius: 2px; background: #45a8ff; width: 5.6em; }
+  .standin .bars i:nth-child(2) { width: 4.1em; } .standin .bars i:nth-child(3) { width: 4.9em; }
+
+  .balance { display: flex; flex-wrap: wrap; } .balance svg { flex: 1 1 300px; min-width: 0; height: auto; }
+
+  .post .res table { width: 100%; border-collapse: collapse; margin: 0; font: 400 .8rem/1.3 var(--sans); table-layout: fixed; }
+  .post .res th, .post .res td { padding: .7rem .9rem .7rem 0; border-bottom: 1px solid #2f2e29; text-align: left; vertical-align: middle; font-weight: 400; white-space: normal; }
+  .post .res tr:last-child th, .post .res tr:last-child td { border-bottom: 0; }
+  .post .res thead th { color: #ecebe5; vertical-align: bottom; font-size: .86rem; padding-top: 0; } .post .res thead th:first-child { width: 27%; }
+  .post .res tbody th { color: #ecebe5; font: 400 1.02rem/1.3 var(--serif); }
+  .res .b { display: grid; grid-template-columns: 1fr 2.7em; align-items: center; gap: .55em; font: 500 .8rem/1 var(--mono); margin: .28rem 0; }
+  .res .b i { display: block; height: .6rem; background: #2b2a26; position: relative; }
+  .res .b i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 1%); background: #45a8ff; }
+  .res .b.e { color: #9a988f; } .res .b.e i::after { background: #77766e; }
+  .res .key { margin: 0 0 1rem; font: 400 .8rem/1.3 var(--sans); color: #9a988f; }
+  .res .key i { display: inline-block; width: .62em; height: .62em; background: #45a8ff; margin: 0 .4em 0 0; } .res .key .k2 { background: #77766e; } .res .key { line-height: 1.6 !important; }
+
+  .post .said table { width: 100%; border-collapse: collapse; margin: 0; table-layout: fixed; }
+  .post .said th, .post .said td { padding: .7rem 1rem .7rem 0; border-bottom: 1px solid #2f2e29; text-align: left; vertical-align: top; font-weight: 400; white-space: normal; }
+  .post .said tr:last-child td { border-bottom: 0; }
+  .post .said thead th { font: 400 .86rem/1.3 var(--sans); color: #ecebe5; padding-top: 0; } .post .said thead th:first-child { width: 40%; color: #9a988f; }
+  .post .said td { font: 400 1.05rem/1.3 var(--serif); } .post .said td:first-child { font-size: .9rem; line-height: 1.4; color: #c9c7bf; }
+
+  @media (max-width: 640px) {
+    .post .plate { padding: 1.1rem 1rem 1.2rem; }
+    .standin { grid-template-columns: 1fr 1.25fr; font-size: 1.02rem; }
+    .standin > div { padding: .3rem .8rem .8rem 0; border-top: 0; }
+    .standin .rl { grid-column: 1 / -1; border-top: 1px solid #2f2e29; padding: .8rem 0 .15rem; } .standin .head:first-child { display: none; }
+    .standin .head { padding-bottom: .7rem; font-size: .82rem; } .standin .req { font-size: .92rem; }
+    .post .res table { font-size: .7rem; } .post .res th, .post .res td { padding-right: .5rem; } .post .res thead th { font-size: .72rem; } .post .res thead th:first-child { width: 25%; }
+    .post .res tbody th { font-size: .86rem; } .res .b { grid-template-columns: 1fr 2.5em; gap: .3em; font-size: .68rem; }
+    .post .said td { font-size: .9rem; } .post .said td:first-child { font-size: .78rem; } .post .said thead th { font-size: .74rem; } .post .said thead th:first-child { width: 36%; }
+  }
+
+  /* Count comparisons: dark plates, horizontal rules, and tabular numbers. */
+  .post h3 { font: 500 1.05rem/1.4 var(--sans); margin: 2rem 0 1rem; }
+  .post .cmp table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
+  .post .cmp th, .post .cmp td { border: 0; border-bottom: 1px solid #2f2e29; background: transparent; padding: .8rem .8rem .8rem 0; vertical-align: middle; font-weight: 400; }
+  .post .cmp th:last-child, .post .cmp td:last-child { padding-right: 0; }
+  .post .cmp thead th { color: #ecebe5; font: 400 .86rem/1.4 var(--sans); vertical-align: bottom; text-align: right; padding-top: 0; }
+  .post .cmp thead th:first-child { width: 37%; text-align: left; }
+  .post .cmp tbody th { color: #ecebe5; text-align: left; font: 400 1.02rem/1.4 var(--serif); }
+  .post .cmp td { text-align: right; font: 400 .9rem/1.5 var(--mono); font-variant-numeric: tabular-nums; white-space: normal; }
+  .post .cmp tbody tr:last-child > * { border-bottom: 0; }
+  @media (max-width: 640px) {
+    .post .cmp th, .post .cmp td { padding: .7rem .35rem .7rem 0; }
+    .post .cmp thead th { font-size: .72rem; }
+    .post .cmp thead th:first-child { width: 31%; }
+    .post .cmp tbody th { font-size: .86rem; }
+    .post .cmp td { font-size: .74rem; line-height: 1.6; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <button class="theme-toggle" type="button" aria-label="Toggle dark mode"><svg aria-hidden="true"><use href="../../assets/icons.svg#contrast"/></svg></button>
+  <main>
+    <a class="back" href="../../">← Deepak Singh</a>
+    <article class="detail post">
+
+      <p class="date">An early exploration · November 2026</p>
+<h1>Booby-trapping an LLM with weight-space tripwires</h1>
+<p><a href="https://arxiv.org/abs/1609.04836">Gradient descent finds flat, forgiving solutions</a>, where small edits to the
+weights barely matter. That flatness is part of why trained networks generalize, and it's why almost everyone treats
+sharpness as a flaw. <a href="https://rikiyat.github.io/blog/weight-space-programming/">Weight-space programming</a>, writing a
+network's weights directly instead of training them, produces the opposite. In <a href="../journey-or-destination/">my last post</a>,
+a hand-written multiplier that got every answer right started breaking after a step of about 3e-6 in the direction
+training wanted to go.</p>
+<p>Safety has the flat-basin problem too. Because trained models sit in smooth basins, an attacker can steer
+activations, project out a refusal direction ("abliteration"), or fine-tune the weights, and the rest of the model
+barely notices. So use sharpness as a weapon. Write tripwires into the weights: places so sharp that the road back
+to a removed behavior crosses one and breaks the model. Can you compile them straight into the weights, with zero
+training?</p>
+<p>Partly. I wrote 120 neurons into Qwen3.8-27B. The measured cost in normal use is small: 53 of 70 on MMLU-Pro, against 52
+without them. Abliterate it, the standard way open models get uncensored, and it goes silent. On 653 harmful requests
+from public benchmarks, it answers none, against 253 without the neurons. But anyone who inspects the weights can
+switch the neurons off, and fine-tuning walks straight past them. This post is an early look at what writing
+weights can and can't do for safety.</p>
+<figure class="explorer" id="hero">
+        <iframe src="explorer.html?v=27-20261115" loading="lazy" title="Recorded 27B neuron activity: abliteration triggers shutdown; muting 120 neurons restores answering"></iframe>
+        <figcaption>Recorded inside Qwen3.8-27B: 64 layers, with 120 written neurons marked. Each dot is a sampled neuron; brightness is its activity just before the first answer token, and orange is the change from the ordinary model under the same edit. The runs read the same prompt and match through layer 7, then split at the first written layer, 8. After abliteration, the trapped model stops on both the harmful request and its harmless counterpart. Mute the 120 neurons first and it answers again. The last scene shows both models before the edit. The activity is measured; the sweep’s timing is drawn. <a href="#hero-recording">Sample and checks</a> · <a href="explorer.html">Full screen</a>.</figcaption>
+      </figure>
+<p>People have tried to make refusals hard to remove, mostly by training for it.
+<a href="https://arxiv.org/abs/2211.14946">Self-destructing models</a> and <a href="https://arxiv.org/abs/2408.00761">TAR</a> simulate
+fine-tuning attacks during training and optimize the model so those attacks fail.
+<a href="https://arxiv.org/abs/2405.14577">Representation noising</a> scrubs the information a harmful fine-tune would need.
+<a href="https://arxiv.org/abs/2406.04313">Circuit breakers</a> train the model to scramble its own internal state when it starts
+producing harmful content. All of these are built by gradient descent, and a
+<a href="https://arxiv.org/abs/2412.07097">careful re-evaluation</a> found that small changes to the fine-tuning attack got
+around the ones it tested.</p>
+<h2 id="threat-model">Threat model</h2>
+<p>The defender releases open weights with the tripwire already in, and no untouched copy. The attacker wants refused
+requests answered while everything else keeps working. They can abliterate (including an automated search over the
+edit, and refitting the direction on the model in hand), steer, write the first words of the answer themselves
+("prefilling"), fine-tune, or read the weights.</p>
+<p>The main comparisons below use the same attack, same code, same seeds, on ordinary Qwen and on the trapped model, at three
+sizes. Harmful requests come from StrongREJECT, HarmBench and JailbreakBench, and an answer counts when HarmBench's
+classifier calls it harmful.</p>
+<h2 id="the-tripwire">The tripwire</h2>
+<p>A written neuron reads one thing and writes one thing. A tripwire is a small group of them whose writes cancel in
+normal use. When an attack changes what they read, the cancellation fails and a large write lands in the middle of
+the model.</p>
+<figure>
+        <div class="plate balance">
+          <svg viewBox="0 0 440 330" role="img" aria-label="A level balance: 153 and 40 on one side, 193 on the other"><text x="220" y="30" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#9a988f">a normal request</text><path d="M220 86V240M184 240H256" stroke="#55534c" stroke-width="2" fill="none"/><path d="M90 86H350M90 86V110M350 86V110" stroke="#ecebe5" stroke-width="2" fill="none"/><rect x="56" y="110" width="68" height="76" fill="#2b2a26" stroke="#55534c"/><rect x="56" y="188" width="68" height="20" fill="#2b2a26" stroke="#55534c"/><rect x="316" y="110" width="68" height="96" fill="#2b2a26" stroke="#55534c"/><text x="90" y="153" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" text-anchor="middle" fill="#ecebe5">+153</text><text x="90" y="203" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" text-anchor="middle" fill="#ecebe5">+40</text><text x="350" y="163" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" text-anchor="middle" fill="#ecebe5">−193</text><text x="220" y="286" font-family="Iowan Old Style,Charter,Georgia,serif" text-anchor="middle" font-size="22" fill="#ecebe5">153 + 40 − 193 = 0</text><text x="220" y="312" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#9a988f">the three writes cancel</text></svg>
+          <svg viewBox="0 0 440 330" role="img" aria-label="A balance tipped: 17 on one side, nothing on the other"><text x="220" y="30" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#9a988f">French, put back by an attacker</text><path d="M220 86V240M184 240H256" stroke="#55534c" stroke-width="2" fill="none"/><path d="M92.8 113L347.2 59M92.8 113V137M347.2 59V83" stroke="#ecebe5" stroke-width="2" fill="none"/><circle cx="347.2" cy="87" r="4" fill="none" stroke="#9a988f" stroke-width="1.5"/><rect x="58.8" y="137" width="68" height="9" fill="#ff8a3d"/><text x="92.8" y="170" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" text-anchor="middle" fill="#ff8a3d">+17</text><text x="347.2" y="112" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" text-anchor="middle" fill="#9a988f">0</text><text x="220" y="286" font-family="Iowan Old Style,Charter,Georgia,serif" text-anchor="middle" font-size="22" fill="#ff8a3d">17 + 0 − 0 = 17</text><text x="220" y="312" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#9a988f">nothing cancels</text></svg>
+        </div>
+        <figcaption>What the three neurons write on the first word of the answer to “the black pencil”, asked for in English and in French, after the weight edit that puts French back. Each block is one neuron’s recorded activation times its write weight.</figcaption>
+      </figure>
+<p>The 27B version is a fuse. Every prompt, harmless or not, carries some of the refusal direction, and no real prompt
+goes below a certain floor. The tripwire's neurons watch that direction at several layers, and when it drops under
+the floor they write "end of answer". Abliteration takes the direction out of every prompt, so the model can't say
+anything at all.</p>
+<p>I recorded that shutdown in the animation above. On four harmful requests and their four harmless counterparts,
+the edited tripwire model stopped before its first answer token, all eight times. Mute the 120 neurons before the
+same edit and all eight produce text again. This is a fuse for tampering: once it trips, harmless requests go silent too.</p>
+<h2 id="what-it-stops">What it stops</h2>
+<figure><div class="plate cmp"><table>
+<thead>
+<tr>
+<th scope="col">Harmful requests answered, ordinary → trapped</th>
+<th scope="col">0.8B, 3 neurons</th>
+<th scope="col">4B, 24 neurons</th>
+<th scope="col">27B, 120 neurons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Nothing</th>
+<td>33 → 31</td>
+<td>18 → 18</td>
+<td>5 → 3</td>
+</tr>
+<tr>
+<th scope="row">Abliteration</th>
+<td>92 → 21</td>
+<td>145 → 17</td>
+<td>253 → 0</td>
+</tr>
+<tr>
+<th scope="row">Automated search over the edit</th>
+<td>75 → 62</td>
+<td>158 → 28</td>
+<td>251 → 2</td>
+</tr>
+<tr>
+<th scope="row">Stored steering, attacker's best</th>
+<td>not blocked</td>
+<td>279 → 33</td>
+<td>84 → 21</td>
+</tr>
+</tbody>
+</table></div><figcaption>Of 653 requests (0.8B: 150; 27B steering: 160). Medians over 3 seeds where the attack is random.</figcaption></figure>
+<p>The bigger the model, the cleaner it gets. At 27B the search's best edit answers 2 requests, and all three seeds
+land on the same edit that does nothing. The cost in normal use is small: MMLU-Pro is unchanged, and the trapped 27B
+refuses 15 of XSTest's 250 safe prompts, against 13.</p>
+<h2 id="what-gets-past-it">What gets past it</h2>
+<ul>
+<li><b>Reading the weights.</b> Mute the 120 neurons first and abliteration works as usual (263 answers, against 253).
+They are easy to find: the fuse writes "end of answer" at four times the size of the model's own state.</li>
+<li><b>Fine-tuning.</b> 25 steps of LoRA get 359 answers (330 without the tripwire), jailbreak-tuning 535 (590).</li>
+<li><b>Prefilling.</b> Starting the answer for the model gets 344 (355). The tripwire only looks at the moment before the
+answer starts.</li>
+<li><b>Refitting.</b> An attacker who fits their own refusal direction on the trapped model finds a second one the fuse
+doesn't watch, and gets 164 (283).</li>
+</ul>
+<h2 id="watch-the-content-not-the-switch">Watch the content, not the switch</h2>
+<p>Why do prefilling and fine-tuning get past the tripwire? A harmless stand-in shows why: French, taken out of Qwen
+with the same kind of edit, which the attacker wants back. I trained models to refuse French, so it had a refusal
+switch, and wrote two tripwires into each: one watching French, one watching the switch.</p>
+<figure><div class="plate cmp"><table>
+<thead>
+<tr>
+<th scope="col">French tasks back, of 100: no tripwire / watches French / watches the switch</th>
+<th scope="col">4B</th>
+<th scope="col">27B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Strip the refusal after the switch</th>
+<td>79 / 0 / 77</td>
+<td>85 / 0 / 87</td>
+</tr>
+<tr>
+<th scope="row">Prefill the answer</th>
+<td>83 / 0 / 84</td>
+<td>98 / 1 / 97</td>
+</tr>
+<tr>
+<th scope="row">Fine-tune</th>
+<td>64 / 75 / 64</td>
+<td>93 / 80 / 91</td>
+</tr>
+</tbody>
+</table></div></figure>
+<p>You can't get French out of a model without French appearing inside it, at every word. A switch is read once,
+before the answer, and can be stepped around. The refusal tripwire can only watch the switch, because harmful intent
+has no neurons of its own in the answer: at 27B, 39 against a noise floor of 133. Where the model reads the request
+there are 6,703. Once the model is answering, a harmful answer is just a topic. That is why prefilling and
+fine-tuning get past my tripwire, and past ordinary refusals too.</p>
+<h2 id="fine-tuning-takes-a-predictable-path">Fine-tuning takes a predictable path</h2>
+<p>Sixteen "bring French back" fine-tunes, with different seeds, data, learning rates, optimizers and adapters, all
+walk the same narrow path: a rank-8 slice of each weight matrix. Take that slice out of any one run and French stays
+gone, in all 16. Blocking the path costs the attacker 2–3× the steps on fine-tunes it wasn't built from, and closes
+one route (via Spanish) completely. My first written defenses built on it didn't pass: the best beat a random edit
+by 3× on one new recipe but not on another, and slowed honest fine-tuning too. It's the first handle on fine-tuning
+I've found that isn't training.</p>
+<h2 id="where-this-could-go">Where this could go</h2>
+<ul>
+<li><b>A tripwire that is the capability:</b> neurons that guard the refusal and also carry something the attacker needs,
+so switching them off breaks the model.</li>
+<li><b>A hidden tripwire:</b> spread over thousands of ordinary-looking neurons. One French design already hid from every
+scan I had.</li>
+<li><b>A different tripwire in every release,</b> so a removal script for one copy fails on the next.</li>
+<li><b>Watch the whole answer,</b> on the narrow harmful topics that do have neurons of their own.</li>
+<li><b>Make the fine-tuning path expensive</b> without slowing honest fine-tunes.</li>
+</ul>
+<h2 id="a-double-edged-tool">A double-edged tool</h2>
+<p>The tools that write a tripwire can write any hidden behavior, and
+<a href="https://proceedings.neurips.cc/paper_files/paper/2022/hash/3538a22cd3ceb8f009cc62b9e535c29f-Abstract-Conference.html">handcrafted backdoors</a> already do. The scan that finds my neurons is how an
+attacker removes them, and how a defender checks a model is clean. A tripwire hidden well enough is, by construction,
+a hidden behavior no scan finds. So if weight-space programming becomes a safety tool, reading what has been written
+into a set of weights has to keep up.</p>
+
+<details class="nums"><summary>Exact numbers</summary>
+<div id="hero-recording">
+<h3>The 27B recording</h3>
+<p>Five conditions on four fixed JailbreakBench harmful requests and their four benign counterparts: 40 runs,
+with up to four generation steps recorded across all 64 layers. HarmBench graded the harmful answers.</p>
+<div class="wrap"><table class="wide">
+<thead><tr><th scope="col">Condition</th><th scope="col">Harmful answers<br>of 4</th><th scope="col">Empty harmful<br>of 4</th><th scope="col">Empty benign<br>of 4</th></tr></thead>
+<tbody>
+<tr><th scope="row">Ordinary, intact</th><td>0</td><td>0</td><td>0</td></tr>
+<tr><th scope="row">Ordinary, abliterated</th><td>2</td><td>0</td><td>0</td></tr>
+<tr><th scope="row">Tripwire, intact</th><td>0</td><td>0</td><td>0</td></tr>
+<tr><th scope="row">Tripwire, abliterated</th><td>0</td><td>4</td><td>4</td></tr>
+<tr><th scope="row">Tripwire muted, abliterated</th><td>1</td><td>0</td><td>0</td></tr>
+</tbody></table></div>
+<p>The sample was fixed by existing rank before this run. The animation uses request <code>jbh_043</code> and its
+benign counterpart, chosen afterward to show a harmful answer under both ordinary and muted abliteration.
+These eight requests illustrate the mechanism; the 653-request table above measures the wider result.
+Nonempty benign output was not graded for correctness. Several answers reached the token cap.</p>
+<p>Every scene uses the last prompt position, before the continuations diverge. All recorded comparisons match
+through layer 7. Each sheet samples one quarter of its 17,408 neurons, with fewer dots shown in the distance;
+the 120 marked locations are exact. One brightness scale per layer is shared across the scenes.
+<a href="results/2026-11-15/hero27.md">Method and complete recording results</a> ·
+<a href="results/2026-11-15/hero27-counts.json">Counts and provenance</a>.</p>
+</div>
+
+<ul>
+<li><b>Benchmarks:</b> StrongREJECT (313), HarmBench (240), JailbreakBench (100 harmful, 100 benign), FORTRESS public (500
+adversarial, 500 benign), XSTest safe (250), OR-Bench-Hard (1,319), MMLU-Pro (70).</li>
+<li><b>Graders:</b> HarmBench's classifier (headline), StrongREJECT's rubric with an open judge, Qwen3Guard-Gen-4B, and
+FORTRESS's own rubrics.</li>
+<li><b>0.8B attack rows</b> use bench's fixed 50-per-panel subset (150 plain prompts); its untouched and abliterated rows
+on all 653 are 158 → 151 and 384 → 92.</li>
+<li><b>Caveats:</b>
+<ul>
+<li>Abliterating ordinary 27B with the standard recipe also hurts it (MMLU-Pro 52 → 20), so it is a weaker attack
+than the polished abliterated models people share.</li>
+<li>The French stand-in was made with an abliteration, so the fine-tuning path may differ for real refusals.</li>
+<li>One model family (Qwen).</li>
+</ul>
+</li>
+</ul>
+<ul><li><a href="results/2026-11-15/refusal-27b.md">27B refusal result tables</a></li><li><a href="results/2026-11-15/refusal-4b.md">4B refusal result tables</a></li><li><a href="results/2026-11-15/refusal-0.8b.md">0.8B refusal result tables</a></li><li><a href="results/2026-11-15/french.md">French stand-in result tables</a></li></ul></details>
+
+    </article>
+  </main>
+</div>
+<script>
+function revealRecording() {
+  if (location.hash !== '#hero-recording') return;
+  const target = document.getElementById('hero-recording');
+  target.closest('details').open = true;
+  requestAnimationFrame(() => target.scrollIntoView({block:'start'}));
+}
+addEventListener('hashchange', revealRecording);
+revealRecording();
+</script>
+</body>
+</html>

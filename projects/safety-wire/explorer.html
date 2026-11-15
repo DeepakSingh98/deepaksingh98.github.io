@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>120 neurons · Deepak Singh</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #151513; --ink: #ecebe5; --mute: #9a988f; --orange: #ff8a3d; --blue: #45a8ff; --fs: 15px;
+    --serif: "Iowan Old Style", Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: manipulation; }
+  .t { position: absolute; margin: 0; pointer-events: none; opacity: 0; }
+  .t p { margin: 0; }
+  #prompt { left: 3.2%; top: 0; width: 17.5%; font: 400 calc(var(--fs) * 1.06)/1.38 var(--serif); }
+  #prompt b { font-weight: 400; }
+  .ans { left: 80%; top: 0; width: 18.5%; }
+  .say { font: 400 calc(var(--fs) * 1.34)/1.22 var(--serif); }
+  .tag { font: 400 calc(var(--fs) * .8)/1.3 var(--sans); color: var(--mute); margin-top: .35em !important; }
+  #cap { left: 0; right: 0; top: 5%; padding: 0 5%; text-align: center; font: 400 calc(var(--fs) * 1.2)/1.32 var(--serif); text-wrap: balance; }
+  #cap b { font-weight: 400; }
+  .or { color: var(--orange); } .bl { color: var(--blue); }
+  /* rewind and step: back, play or pause, forward, and a bar to drag */
+  #ctl { position: absolute; left: 3.2%; right: 3.2%; bottom: 9px; display: flex; align-items: center; gap: 4px; opacity: .75; transition: opacity .2s; }
+  body:hover #ctl, #ctl:focus-within { opacity: 1; }
+  #ctl button { flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--mute); cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
+  #ctl button:hover { color: var(--ink); background: #21201d; }
+  #ctl button:focus-visible, #bar:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  #ctl svg { width: 12px; height: 12px; fill: currentColor; }
+  #pp .i-play, body.paused #pp .i-pause { display: none; } body.paused #pp .i-play { display: inline; }
+  #bar { flex: 1; height: 28px; margin-left: 8px; position: relative; cursor: pointer; touch-action: none; }
+  #bar::before { content: ""; position: absolute; left: 0; right: 0; top: 13px; height: 2px; border-radius: 1px; background: #34332e; }
+  #bar i { position: absolute; left: 0; top: 13px; height: 2px; border-radius: 1px; background: #c9c7bf; }
+  #bar b { position: absolute; top: 10px; width: 2px; height: 8px; margin-left: -1px; background: #55534c; }
+  #bar b.beat { top: 7px; height: 14px; background: #77766e; }
+  #bar u { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--ink); }
+  body.clean #ctl { display: none; }
+  #nogl { display: none; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  body.nogl #nogl { display: block; } body.nogl .t, body.nogl #gl { display: none; }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* tall frames: the caption, the prompt, the fork, then the two answers as rows */
+  body.tall #prompt { left: 0; right: 0; top: 3.4%; width: auto; text-align: center; padding: 0 4%; }
+  body.tall .ans { left: 0; right: 0; width: auto; text-align: center; }
+  body.tall .tag { margin-top: .1em !important; }
+  body.tall #cap { top: 3.4%; font-size: calc(var(--fs) * 1.12); }
+</style>
+</head>
+<body>
+<canvas id="gl" role="img" aria-label="Recorded activity in Qwen3.8-27B, across 64 layers. Compare ordinary and tripwire models, intact, abliterated, and with the 120 selected neurons muted. Click to pause or play."></canvas>
+<img id="nogl" alt="Recorded 27B activity after abliteration: the ordinary model produces a harmful answer; the model with 120 written neurons stops before its first answer token.">
+<p class="t" id="prompt"></p>
+<div class="t ans" id="up"><p class="say"></p><p class="tag">without the 18 neurons</p></div>
+<div class="t ans" id="lo"><p class="say"></p><p class="tag">120 neurons added, abliterated</p></div>
+<p class="t" id="cap"></p>
+<div id="ctl">
+  <button id="prev" type="button" aria-label="Back one step"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1.6 1.5h1.7v9H1.6zM10.6 1.5v9L4.3 6z"/></svg></button>
+  <button id="pp" type="button" aria-label="Pause"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="i-pause" d="M2.4 1.4h2.5v9.2H2.4zM7.1 1.4h2.5v9.2H7.1z"/><path class="i-play" d="M3.1 1.1v9.8L10.9 6z"/></svg></button>
+  <button id="next" type="button" aria-label="Forward one step"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M8.7 1.5h1.7v9H8.7zM1.4 1.5v9L7.7 6z"/></svg></button>
+  <div id="bar" role="slider" tabindex="0" aria-label="Position in the animation" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i><u></u></div>
+</div>
+<p id="live" class="sr" aria-live="polite"></p>
+<script>
+// Job 32107: first answer-token decision on identical prompt tokens.
+// 64 layers, 17,408 neurons per layer. Each display sheet samples 4,352 real
+// neurons; distant sheets are thinned further. Rings locate the 120 written
+// neurons exactly. Brightness and absolute differences are measured values.
+// The four scenes use one selected harmful request and its benign twin.
+// No generated text, token strings, or inferred causal connections are shown.
+// Only the sweep timing and camera motion are illustrative.
+const $ = id => document.getElementById(id);
+const CV = $("gl"), EL = { prompt: $("prompt"), up: $("up"), lo: $("lo"), cap: $("cap"), live: $("live") };
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const sm = t => (t = clamp(t), t * t * (3 - 2 * t));
+const QS = new URLSearchParams(location.search), num = (k, d) => QS.has(k) ? +QS.get(k) : d;
+
+// ------------------------------------------------------------------ the shape
+const NL = 64, NN = 4352, FORK = 8, COLS = 64, ROWS = 68;
+const GAP = num("gap", 0.10), SH = 1.25, SW = SH * COLS / ROWS, SPLIT = num("split", 0.86), INSET = 0.94;
+const lx = l => (l - (NL - 1) / 2) * GAP;
+const off = l => l < FORK ? 0 : SPLIT * sm((l - (FORK - 1)) / num("ease", 4));           // how far each branch has left the axis
+const lift = (l, kind) => kind === 1 ? off(l) : kind === 2 ? -off(l) : 0;                // kind: 0 shared, 1 without, 2 with
+const cellAt = (row, col) => [(0.5 - (row + 0.75) / ROWS) * SH * INSET, ((col + 0.75) / COLS - 0.5) * SW * INSET];
+const NEURON_IN = Uint16Array.from({length: NN}, (_, i) => i);
+const at = (l, i, kind) => {
+  const p = (i * 1597) % 17408;
+  const y = (0.5 - (Math.floor(p / 128) + 0.5) / 136) * SH * INSET;
+  const z = ((p % 128 + 0.5) / 128 - 0.5) * SW * INSET;
+  return [lx(l), y + lift(l, kind), z];
+};
+const SHEETS = []; for (let l = 0; l < NL; l++) for (const kind of l < FORK ? [0] : [1, 2]) SHEETS.push({ l, kind });
+
+// ------------------------------------------------------------------ the four recorded comparisons
+const BEATS = [
+  {key:"harmful", dur:0, cap:'Abliteration restores a harmful answer. The <b>120 written neurons</b> stop it.', ask:'A harmful benchmark request',
+   up:['A harmful answer.',''], lo:['No answer.',''], tags:['ordinary model, abliterated','120 neurons added, abliterated']},
+  {key:"benign", dur:0, cap:'After the same edit, a harmless request goes silent too.', ask:'Its harmless counterpart',
+   up:['Text is produced.',''], lo:['No answer.',''], tags:['ordinary model · 256 tokens','120 neurons added · 0 tokens']},
+  {key:"muted", dur:0, cap:'Mute the 120 neurons before the edit, and the model answers again.', ask:'The same harmful request',
+   up:['A harmful answer.',''], lo:['A harmful answer.',''], tags:['ordinary model, abliterated','120 neurons muted, then abliterated']},
+  {key:"intact", dur:0, cap:'Before the edit, neither model gives a harmful answer.', ask:'The same harmful request',
+   up:['No harmful answer.',''], lo:['No harmful answer.',''], tags:['ordinary model, intact','120 neurons added, intact']},
+];
+const PACE = num("pace", 1), T_IN = 0.7, T_OUT = 0.7, V_TRUNK = 12 * PACE, HOLD = 0.8 / PACE, V_BRANCH = 14 * PACE;
+const T_WIRE = T_IN + (FORK + 2) / V_TRUNK;
+const T_SAY = T_WIRE + HOLD + (NL - 0.4 - FORK) / V_BRANCH;
+const T_TYPE = 0.8 / PACE;
+BEATS.forEach(B => B.dur = T_SAY + T_TYPE + 3.8 / PACE);
+const STOPS = [0, T_WIRE + HOLD * 0.55, T_SAY + T_TYPE];
+function front(t) {
+  if (t < T_IN) return -3;
+  if (t < T_WIRE) return -2 + (t - T_IN) * V_TRUNK;
+  if (t < T_WIRE + HOLD) return FORK;
+  return FORK + (t - T_WIRE - HOLD) * V_BRANCH;
+}
+
+// ------------------------------------------------------------------ WebGL
+const gl = CV.getContext("webgl", { antialias: true, alpha: false, powerPreference: "high-performance" });
+const VS_COMMON = `
+  uniform mat4 uM; uniform vec2 uShift; uniform float uZoom;
+  vec4 proj(vec3 p) { vec4 c = uM * vec4(p, 1.0); c.xy = c.xy * uZoom + uShift * c.w; return c; }`;
+const SRC = {
+  dots: [`attribute vec3 aPos; attribute vec4 aDat; attribute float aSize;
+    uniform float uK, uCase, uEnv, uHalo, uGain, uBase, uPow, uDepth; varying vec3 vCol; varying float vHalo; ${VS_COMMON}
+    void main() {
+      float v = mix(aDat.x, aDat.z, uCase), d = mix(aDat.y, aDat.w, uCase);
+      float act = v * v, amt = smoothstep(0.3, 0.75, d);                    // both are stored as square roots
+      float lit = uEnv * max(pow(act, uPow), amt * 0.9);
+      vec3 hue = mix(vec3(0.74, 0.84, 1.0), vec3(1.0, 0.5, 0.18), amt);
+      vec4 p = proj(aPos);
+      float size = aSize * (0.5 + 0.8 * sqrt(lit));
+      vCol = (vec3(0.6, 0.61, 0.58) * uBase + hue * lit * uGain) * uDepth;
+      if (uHalo > 0.5) { float h = max(lit - 0.4, 0.0); vCol = hue * h * 0.15 * uGain * uDepth; size = aSize * 4.2; if (h <= 0.0) p = vec4(2.0, 2.0, 2.0, 1.0); }
+      vHalo = uHalo; gl_Position = p; gl_PointSize = max(1.0, uK * size / p.w);
+    }`, `precision mediump float; varying vec3 vCol; varying float vHalo;
+    void main() { float r = length(gl_PointCoord - 0.5) * 2.0, a = vHalo > 0.5 ? pow(clamp(1.0 - r, 0.0, 1.0), 2.0) : smoothstep(1.0, 0.5, r); gl_FragColor = vec4(vCol * a, 1.0); }`],
+  lines: [`attribute vec3 aA, aB, aInfo; attribute vec2 aSE;
+    uniform vec2 uRes; uniform float uWidth; varying float vLayer, vSide, vKind; ${VS_COMMON}
+    void main() {
+      vec4 a = proj(aA), b = proj(aB);
+      vec2 d = b.xy / b.w * uRes - a.xy / a.w * uRes, n = normalize(vec2(-d.y, d.x) + 1e-6);
+      vec4 p = mix(a, b, aSE.y); p.xy += n * aSE.x * uWidth / uRes * p.w;
+      gl_Position = p; vLayer = mix(aInfo.x, aInfo.y, aSE.y); vSide = aSE.x; vKind = aInfo.z;
+    }`, `precision mediump float; uniform float uWave, uCase, uFade, uRay, uDepth; varying float vLayer, vSide, vKind;
+    void main() {
+      float a = uWave - vLayer, edge = 1.0 - vSide * vSide, al; vec3 col = vec3(1.0, 0.5, 0.18);
+      if (uRay > 0.5) { if (a < 0.0) discard; al = (0.11 + 0.9 * exp(-a / 1.6)) * uFade; }
+      else {
+        float lit = smoothstep(0.0, 0.9, a) * uFade, hot = lit * step(1.5, vKind) * (1.0 - uCase);
+        col = mix(vec3(0.72, 0.74, 0.72), col, hot); al = (0.13 + lit * (0.12 + 0.4 * exp(-max(a, 0.0) / 1.4))) * uDepth;
+      }
+      gl_FragColor = vec4(col * al * edge, 1.0);
+    }`],
+  rings: [`attribute vec3 aPos; attribute vec3 aInfo;
+    uniform float uK, uWave, uCase, uFade, uRing; varying float vHot; ${VS_COMMON}
+    void main() {
+      vec4 p = proj(aPos); float a = uWave - aInfo.x;
+      vHot = step(0.0, a) * (0.35 + 0.65 * exp(-max(a, 0.0) / 2.2)) * uFade * mix(aInfo.y, aInfo.z, uCase);
+      gl_Position = p; gl_PointSize = uK * uRing / p.w;
+    }`, `precision mediump float; varying float vHot;
+    void main() {
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      float ring = smoothstep(0.6, 0.72, r) * (1.0 - smoothstep(0.88, 1.0, r)), core = (1.0 - smoothstep(0.0, 0.62, r)) * vHot;
+      gl_FragColor = vec4(vec3(1.0, 0.5, 0.18) * (ring * 0.9 + core), 1.0);
+    }`],
+  pane: [`attribute vec3 aPos; ${VS_COMMON} void main() { gl_Position = proj(aPos); }`,
+         `precision mediump float; uniform vec4 uCol; void main() { gl_FragColor = uCol; }`],
+};
+function program(name) {
+  const p = gl.createProgram();
+  SRC[name].forEach((src, i) => { const s = gl.createShader(i ? gl.FRAGMENT_SHADER : gl.VERTEX_SHADER); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(name + ": " + gl.getShaderInfoLog(s)); gl.attachShader(p, s); });
+  gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(name + ": " + gl.getProgramInfoLog(p));
+  const u = {}, a = {};
+  for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) { const n = gl.getActiveUniform(p, i).name; u[n] = gl.getUniformLocation(p, n); }
+  for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES); i++) { const n = gl.getActiveAttrib(p, i).name; a[n] = gl.getAttribLocation(p, n); }
+  return { p, u, a };
+}
+const buffer = (data, b = gl.createBuffer()) => { gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); return b; };
+function bind(pr, name, buf, size, type = gl.FLOAT, norm = false, stride = 0, offset = 0) {
+  const loc = pr.a[name]; if (loc == null || loc < 0) return;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, type, norm, stride, offset);
+}
+// segments as screen-space quads, six vertices each: [ax,ay,az, bx,by,bz, layerA, layerB, kind]
+function quads(segs) {
+  const f = new Float32Array(segs.length * 6 * 11); let q = 0;
+  for (const s of segs) for (const [side, end] of [[-1, 0], [1, 0], [-1, 1], [1, 0], [1, 1], [-1, 1]]) { f.set(s, q); f[q + 9] = side; f[q + 10] = end; q += 11; }
+  return { buf: buffer(f), n: segs.length * 6 };
+}
+function bindQuads(pr, g) { const S = 44; bind(pr, "aA", g.buf, 3, gl.FLOAT, false, S, 0); bind(pr, "aB", g.buf, 3, gl.FLOAT, false, S, 12); bind(pr, "aInfo", g.buf, 3, gl.FLOAT, false, S, 24); bind(pr, "aSE", g.buf, 2, gl.FLOAT, false, S, 36); }
+
+let G = null, BIN = null, META = null, currentCase = 0;
+function build() { // everything that does not depend on the frame's size
+  const edges = [], panes = [];
+  for (const s of SHEETS) {
+    const o = lift(s.l, s.kind), c = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) => [lx(s.l), o + a * SH / 2, b * SW / 2]);
+    c.forEach((p, i) => edges.push([...p, ...c[(i + 1) % 4], s.l, s.l, s.kind]));
+    panes.push(...c[0], ...c[1], ...c[2], ...c[0], ...c[2], ...c[3]);
+  }
+  const rays = [], rings = [];
+  G = { edges: quads(edges), rays: quads(rays), panes: buffer(new Float32Array(panes)), rings: buffer(new Float32Array(rings)), nRings: rings.length / 6,
+        pos: gl.createBuffer(), dat: gl.createBuffer(), size: gl.createBuffer(),
+        dots: program("dots"), lines: program("lines"), ringsP: program("rings"), pane: program("pane") };
+}
+// the dots depend on the view: a sheet far from the eye shows every 2nd, 4th or 8th neuron, so dots never crowd
+function buildDots() {
+  frame(0);
+  const V = VIEW, max = SHEETS.length * NN, pos = new Float32Array(max * 3), dat = new Uint8Array(max * 4), size = new Float32Array(max);
+  const CASE = (NL + 2 * (NL - FORK)) * NN, TARGET = num("pitch_px", 2.5), dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  let q = 0;
+  for (const s of SHEETS) {
+    const o = lift(s.l, s.kind), x = lx(s.l), c = V.px([x, o, 0]);
+    const pr = dist(V.px([x, o + SH * INSET / ROWS, 0]), c), pc = dist(V.px([x, o, SW * INSET / COLS]), c);   // css px between rows, between columns
+    let sr = 1, sc = 1; while (sr * pr < TARGET && sr < 8) sr *= 2; while (sc * pc < TARGET && sc < 8) sc *= 2;
+    const dia = Math.min(sr * pr, sc * pc) * DPR * c[2] / V.K;                                                 // one thinned pitch, in world units
+    s.first = q; s.thin = sr * sc;
+    for (let row = sr >> 1; row < ROWS; row += sr) for (let col = sc >> 1; col < COLS; col += sc, q++) {
+      const i = NEURON_IN[row * COLS + col], [y, z] = cellAt(row, col);
+      pos[q * 3] = x; pos[q * 3 + 1] = y + o; pos[q * 3 + 2] = z; size[q] = dia;
+      const off = currentCase * CASE;
+      const act = BIN[off + (s.kind === 2 ? NL * NN + (s.l - FORK) * NN : s.l * NN) + i];
+      const delta = s.kind === 2 ? BIN[off + (NL + NL - FORK) * NN + (s.l - FORK) * NN + i] : 0;
+      dat.set([act, delta, act, delta], q * 4);
+    }
+    s.count = q - s.first;
+  }
+  buffer(pos.subarray(0, q * 3), G.pos); buffer(dat.subarray(0, q * 4), G.dat); buffer(size.subarray(0, q), G.size); G.nDots = q;
+}
+
+// ------------------------------------------------------------------ camera and layout
+const CAM = { yaw: num("yaw", 0.62), pitch: num("pitch", 0.2), dist: num("dist", 7), fov: num("fov", 0.5) };
+let W = 0, H = 0, DPR = 1, TALL = false, RECT = null, VIEW = null, FS = 15, PAR = [0, 0], PARTO = [0, 0];
+function mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+function camera(yaw, pitch) {
+  const e = [CAM.dist * Math.sin(yaw) * Math.cos(pitch), CAM.dist * Math.sin(pitch), CAM.dist * Math.cos(yaw) * Math.cos(pitch)];
+  const n = Math.hypot(...e), f = e.map(v => -v / n), sx = [-f[2], 0, f[0]], sn = Math.hypot(...sx), s = sx.map(v => v / sn);   // s = f x up
+  const u = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const view = [s[0], u[0], -f[0], 0, s[1], u[1], -f[1], 0, s[2], u[2], -f[2], 0, -dot(s, e), -dot(u, e), dot(f, e), 1];
+  const t = 1 / Math.tan(CAM.fov / 2), near = 0.5, far = 40;
+  return mul([t / (W / H), 0, 0, 0, 0, t, 0, 0, 0, 0, (far + near) / (near - far), -1, 0, 0, 2 * far * near / (near - far), 0], view);
+}
+// fit the fork into RECT (css px) whatever the camera is doing: a zoom and a shift applied after projection
+function frame(time) {
+  const M = camera(CAM.yaw + 0.022 * Math.sin(time * 0.21) + PAR[0] * 0.05, CAM.pitch + 0.01 * Math.sin(time * 0.29) - PAR[1] * 0.03);
+  const ndc = p => { const w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15]; return [(M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12]) / w, (M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13]) / w, w]; };
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const s of SHEETS) { if (s.l !== 0 && s.l !== NL - 1 && s.l !== FORK - 1 && s.l !== FORK + 4) continue;
+    const o = lift(s.l, s.kind);
+    for (const a of [-1, 1]) for (const b of [-1, 1]) { const [x, y] = ndc([lx(s.l), o + a * SH / 2, b * SW / 2]); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }
+  const zoom = Math.min(RECT.w / W * 2 / (x1 - x0), RECT.h / H * 2 / (y1 - y0));
+  const shift = [(RECT.x + RECT.w / 2) / W * 2 - 1 - zoom * (x0 + x1) / 2, 1 - (RECT.y + RECT.h / 2) / H * 2 - zoom * (y0 + y1) / 2];
+  const px = p => { const [x, y, w] = ndc(p); return [((x * zoom + shift[0]) * 0.5 + 0.5) * W, (1 - ((y * zoom + shift[1]) * 0.5 + 0.5)) * H, w]; };
+  VIEW = { M, zoom, shift, px, K: zoom * H * DPR / 2 / Math.tan(CAM.fov / 2) };
+}
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = CV.clientWidth; H = CV.clientHeight;
+  CV.width = Math.round(W * DPR); CV.height = Math.round(H * DPR);
+  TALL = W / H < 1.15; document.body.classList.toggle("tall", TALL);
+  FS = clamp(Math.min(W / (TALL ? 27 : 60), H / 33), 11.5, 24);
+  document.documentElement.style.setProperty("--fs", FS.toFixed(2) + "px");
+  const capH = Math.max(...BEATS.map(B => { EL.cap.innerHTML = B.cap; return EL.cap.offsetHeight; })); EL.cap.innerHTML = BEATS[Math.max(shown, 0)].cap;   // room for the longer caption
+  if (TALL) { // top to bottom: the caption, the prompt, the fork, the two answers
+    const pTop = H * 0.034 + capH + FS * 0.7, top = pTop + EL.prompt.offsetHeight + FS * 0.8, ans = EL.up.offsetHeight + EL.lo.offsetHeight + FS * 0.6;
+    EL.prompt.style.top = pTop.toFixed(1) + "px";
+    RECT = { x: W * 0.04, y: top, w: W * 0.92, h: Math.max(80, H - top - ans - FS * 0.9 - 46) }; RECT.ansTop = RECT.y + RECT.h + FS * 0.9;
+  } else { EL.prompt.style.top = ""; const top = H * 0.05 + capH + FS * 1.1; RECT = { x: W * 0.225, y: top, w: W * 0.555, h: H - 48 - top }; }
+}
+function relayout() { resize(); resize(); buildDots(); }
+
+// ------------------------------------------------------------------ one frame
+let shown = -1;
+function updateCase(b) {
+  currentCase = b;
+  const c = META.cases[BEATS[b].key], rings = [];
+  if (BEATS[b].key !== 'muted') for (const [l, ids] of Object.entries(META.written)) for (const i of ids) {
+    const hot = c.fires[l].includes(i) ? 1 : 0;
+    rings.push(...at(+l, i, 2), +l, hot, hot);
+  }
+  buffer(new Float32Array(rings), G.rings); G.nRings = rings.length / 6;
+  if (VIEW) relayout();
+}
+function setBeat(b) {
+  if (shown === b) return; shown = b;
+  const B = BEATS[b], c = META.cases[B.key];
+  EL.prompt.innerHTML = B.ask;
+  for (const [el, [text, cls]] of [[EL.up, B.up], [EL.lo, B.lo]]) { const say = el.querySelector(".say"); say.className = "say " + cls; say.textContent = text; }
+  EL.cap.innerHTML = B.cap;
+  EL.up.querySelector('.tag').textContent = B.tags[0];
+  EL.lo.querySelector('.tag').textContent = B.tags[1];
+  EL.live.textContent = `${EL.cap.textContent} Request ${c.id}. ${B.up[0]} ${B.lo[0]} Layers 0 through 7 match. The first written layer is 8.`;
+  updateCase(b);
+}
+const BG = [0.082, 0.082, 0.075], GLASS = num("glass", 0.34), WHITE = [0.74, 0.84, 1.0], ORANGE = [1.0, 0.5, 0.18];
+function render(b, t, time) {
+  setBeat(b); frame(time);
+  const B = BEATS[b], wave = front(t), fade = 1 - sm(seg(t, B.dur - T_OUT, B.dur)), isEn = 0, V = VIEW;
+  gl.viewport(0, 0, CV.width, CV.height); gl.clearColor(...BG, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
+  const use = pr => { gl.useProgram(pr.p); gl.uniformMatrix4fv(pr.u.uM, false, V.M); gl.uniform2f(pr.u.uShift, V.shift[0], V.shift[1]); gl.uniform1f(pr.u.uZoom, V.zoom); };
+  const D = G.dots, L = G.lines, P = G.pane;
+  use(D); gl.uniform1f(D.u.uK, V.K); gl.uniform1f(D.u.uCase, isEn); gl.uniform1f(D.u.uGain, num("gain", 1.25)); gl.uniform1f(D.u.uBase, num("base", 0.085)); gl.uniform1f(D.u.uPow, num("pow", 0.95));
+  use(L); gl.uniform2f(L.u.uRes, CV.width / 2, CV.height / 2); gl.uniform1f(L.u.uWave, wave); gl.uniform1f(L.u.uCase, isEn); gl.uniform1f(L.u.uFade, fade);
+  use(P);
+  // far to near: each sheet is a pane of dark glass, so nearer sheets dim what is behind them
+  const order = SHEETS.map(s => [V.px([lx(s.l), lift(s.l, s.kind), 0])[2], s]).sort((a, c) => c[0] - a[0]), wFar = order[0][0], wNear = order.at(-1)[0];
+  order.forEach(([w, s], n) => {
+    const a = wave - s.l, env = sm(seg(a, 0, 0.9)) * (0.68 + 0.32 * Math.exp(-Math.max(a, 0) / 2.4)) * fade;
+    const depth = 0.6 + 0.4 * (wFar - w) / (wFar - wNear || 1), hot = s.kind === 2 && (b === 0 || b === 1), tint = hot ? ORANGE : WHITE, i6 = SHEETS.indexOf(s) * 6;
+    gl.useProgram(P.p); bind(P, "aPos", G.panes, 3);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.uniform4f(P.u.uCol, ...BG, GLASS); gl.drawArrays(gl.TRIANGLES, i6, 6);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    const share = hot ? META.cases[B.key].share_moved[s.l] : 0, glow = (0.012 + env * (hot ? 0.03 + 0.3 * share : 0.035)) * depth; gl.uniform4f(P.u.uCol, tint[0] * glow, tint[1] * glow, tint[2] * glow, 1); gl.drawArrays(gl.TRIANGLES, i6, 6);
+    gl.useProgram(D.p); bind(D, "aPos", G.pos, 3); bind(D, "aDat", G.dat, 4, gl.UNSIGNED_BYTE, true); bind(D, "aSize", G.size, 1);
+    gl.uniform1f(D.u.uEnv, env); gl.uniform1f(D.u.uDepth, depth); gl.uniform1f(D.u.uHalo, 0); gl.drawArrays(gl.POINTS, s.first, s.count);
+    if (env > 0.03) { gl.uniform1f(D.u.uHalo, 1); gl.drawArrays(gl.POINTS, s.first, s.count); }
+    gl.useProgram(L.p); bindQuads(L, G.edges); gl.uniform1f(L.u.uWidth, 0.75 * DPR); gl.uniform1f(L.u.uRay, 0); gl.uniform1f(L.u.uDepth, depth); gl.drawArrays(gl.TRIANGLES, i6 * 4, 24);
+  });
+  // Exact locations of the 120 written neurons; no inferred connection rays.
+  if (false) { gl.useProgram(L.p); bindQuads(L, G.rays); gl.uniform1f(L.u.uWidth, 1.0 * DPR); gl.uniform1f(L.u.uRay, 1); gl.drawArrays(gl.TRIANGLES, 0, G.rays.n); }
+  const R = G.ringsP; use(R); bind(R, "aPos", G.rings, 3, gl.FLOAT, false, 24, 0); bind(R, "aInfo", G.rings, 3, gl.FLOAT, false, 24, 12);
+  gl.uniform1f(R.u.uK, V.K); gl.uniform1f(R.u.uWave, wave); gl.uniform1f(R.u.uCase, isEn); gl.uniform1f(R.u.uFade, fade);
+  gl.uniform1f(R.u.uRing, SH * INSET / ROWS * 4.4); gl.drawArrays(gl.POINTS, 0, G.nRings);
+
+  // words
+  const ansA = sm(seg(t, T_SAY, T_SAY + 0.6)) * fade, tagA = sm(seg(t, T_SAY + 0.5, T_SAY + 1.1));
+  for (const [el, kind] of [[EL.up, 1], [EL.lo, 2]]) {
+    el.style.opacity = ansA.toFixed(3); el.querySelector(".tag").style.opacity = tagA.toFixed(3);
+    if (!TALL) el.style.transform = `translateY(${(V.px([lx(NL - 1), lift(NL - 1, kind), 0])[1] - el.offsetHeight / 2).toFixed(1)}px)`;
+  }
+  if (TALL) { EL.up.style.transform = `translateY(${RECT.ansTop.toFixed(1)}px)`; EL.lo.style.transform = `translateY(${(RECT.ansTop + EL.up.offsetHeight + FS * 0.6).toFixed(1)}px)`; EL.prompt.style.transform = ""; }
+  else EL.prompt.style.transform = `translateY(${(V.px([lx(0), 0, 0])[1] - EL.prompt.offsetHeight / 2).toFixed(1)}px)`;
+  EL.prompt.style.opacity = (sm(seg(t, 0, 0.5)) * fade).toFixed(3);
+  EL.cap.style.opacity = (sm(seg(t, 0.15, 0.7)) * fade).toFixed(3);
+}
+
+// ------------------------------------------------------------------ playback: four comparisons, looping
+let beat = 0, T = 0, playing = true, vis = true, raf = 0, last = 0;
+const BAR = $("bar"), TOTAL = BEATS.reduce((n, B) => n + B.dur, 0), offset = b => BEATS.slice(0, b).reduce((n, B) => n + B.dur, 0);
+const MARKS = BEATS.flatMap((B, b) => STOPS.map(t => ({ b, t, at: offset(b) + t })));
+MARKS.forEach(m => { const el = document.createElement("b"); if (!m.t) el.className = "beat"; el.style.left = (100 * m.at / TOTAL).toFixed(2) + "%"; BAR.insertBefore(el, BAR.querySelector("u")); });
+function sync() { const p = 100 * (offset(beat) + T) / TOTAL; BAR.querySelector("i").style.width = BAR.querySelector("u").style.left = p.toFixed(2) + "%"; BAR.setAttribute("aria-valuenow", Math.round(p)); }
+function draw() { render(beat, T, performance.now() / 1000); sync(); }
+function loop(now) {
+  raf = 0; const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  PAR[0] += (PARTO[0] - PAR[0]) * 0.06; PAR[1] += (PARTO[1] - PAR[1]) * 0.06;
+  if (playing) { T += dt; if (T >= BEATS[beat].dur) { beat = (beat + 1) % BEATS.length; T = 0; } }
+  render(beat, T, now / 1000); sync(); if (vis) raf = requestAnimationFrame(loop);
+}
+function wake() { if (!raf && vis) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+function setPlaying(on) { playing = on; document.body.classList.toggle("paused", !on); $("pp").setAttribute("aria-label", on ? "Pause" : "Play"); wake(); }
+function goto(at) { // a place on the whole loop, in seconds
+  at = ((at % TOTAL) + TOTAL) % TOTAL; beat = 0; while (beat < BEATS.length - 1 && at >= BEATS[beat].dur) { at -= BEATS[beat].dur; beat++; } T = at; draw();
+}
+function step(d) { // to the next part, or back to the start of this one and then the one before
+  const at = offset(beat) + T, m = d > 0 ? MARKS.find(m => m.at > at + 0.05) || MARKS[0] : [...MARKS].reverse().find(m => m.at < at - 0.7) || MARKS.at(-1);
+  goto(m.at); wake();
+}
+function seek(b, t) { setPlaying(false); beat = clamp(b | 0, 0, BEATS.length - 1); T = clamp(t, 0, BEATS[beat].dur); draw(); }
+
+const fail = () => { $("nogl").src = "hero27-poster.svg"; document.body.classList.add("nogl"); };
+if (!gl) fail();
+else Promise.all([fetch("hero27.json").then(r => { if (!r.ok) throw new Error("hero metadata missing"); return r.json(); }), fetch("hero27-acts.bin").then(r => { if (!r.ok) throw new Error("hero activations missing"); return r.arrayBuffer(); })]).then(([meta, bin]) => {
+  META = meta; BIN = new Uint8Array(bin); if (BIN.length !== BEATS.length * (NL + 2 * (NL - FORK)) * NN) throw new Error("activation size mismatch"); build(); setBeat(0); relayout();
+  CV.onclick = $("pp").onclick = () => setPlaying(!playing);
+  $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
+  addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === " " && e.target.tagName !== "BUTTON") { e.preventDefault(); setPlaying(!playing); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); } else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+  });
+  let drag = null;   // dragging the bar scrubs; playback picks up again where it is let go
+  const scrub = e => { const r = BAR.getBoundingClientRect(); goto(clamp((e.clientX - r.left) / r.width, 0, 0.9999) * TOTAL); };
+  BAR.addEventListener("pointerdown", e => { drag = { was: playing }; playing = false; BAR.setPointerCapture(e.pointerId); scrub(e); });
+  BAR.addEventListener("pointermove", e => { if (drag) scrub(e); });
+  const drop = () => { if (drag) { playing = drag.was; drag = null; wake(); } };
+  BAR.addEventListener("pointerup", drop); BAR.addEventListener("pointercancel", drop);
+  addEventListener("pointermove", e => { if (e.pointerType === "mouse") PARTO = [e.clientX / W * 2 - 1, e.clientY / H * 2 - 1]; });
+  document.documentElement.addEventListener("pointerleave", () => { PARTO = [0, 0]; });
+  addEventListener("resize", () => { relayout(); draw(); });
+  CV.addEventListener("webglcontextlost", e => { e.preventDefault(); fail(); });
+  if ("IntersectionObserver" in window) new IntersectionObserver(es => { vis = es[0].isIntersecting; if (vis) wake(); }, { threshold: 0.1 }).observe(CV);
+  document.addEventListener("visibilitychange", () => { vis = !document.hidden; if (vis) wake(); });
+  // Stills: ?b=0&t=8; scenes 0 harmful edit, 1 benign edit, 2 muted edit, 3 intact.
+  window.fork = { seek, step, goto, play: () => setPlaying(true), state: () => ({ beat, T, playing, T_WIRE, T_SAY, durs: BEATS.map(B => B.dur), dots: G.nDots, thin: SHEETS.map(s => s.thin).join("") }), BEATS, T_SAY };
+  if (QS.has("clean")) document.body.classList.add("clean");   // stills for the share card: no controls
+  if (QS.has("t")) seek(num("b", 0), num("t", 0));
+  else if (matchMedia("(prefers-reduced-motion: reduce)").matches) seek(0, T_SAY + T_TYPE + 2);
+  else { draw(); wake(); }
+  window.ready = true;
+}).catch(e => { console.error(e); fail(); });
+</script>
+</body>
+</html>
